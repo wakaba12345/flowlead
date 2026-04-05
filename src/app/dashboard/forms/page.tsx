@@ -80,15 +80,15 @@ export default async function FormsPage() {
               <div className="flex items-center gap-2 flex-wrap shrink-0">
                 <EmbedCodeButton formId={form.id} />
                 <Link href={`/dashboard/forms/${form.id}/preview`}
-                  className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs text-orange-400 transition hover:bg-orange-500/20">
+                  className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs text-orange-400 transition hover:bg-orange-500/20 active:scale-95 active:bg-orange-500/30">
                   預覽
                 </Link>
                 <Link href={`/dashboard/leads?form_id=${form.id}`}
-                  className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 transition hover:bg-gray-800">
+                  className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 transition hover:bg-gray-800 active:scale-95 active:bg-gray-700">
                   名單
                 </Link>
                 <Link href={`/dashboard/forms/${form.id}/edit`}
-                  className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 transition hover:bg-gray-800">
+                  className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 transition hover:bg-gray-800 active:scale-95 active:bg-gray-700">
                   編輯
                 </Link>
                 <FormActions formId={form.id} status={form.status} />

@@ -29,7 +29,7 @@ export default function StatusToggle({ formId, currentStatus }: Props) {
       onClick={toggle}
       disabled={isPending}
       title={optimistic ? '點擊停用' : '點擊啟用'}
-      className="shrink-0 transition-opacity disabled:opacity-50"
+      className="shrink-0 transition-opacity disabled:opacity-50 active:scale-95"
     >
       <div className={`relative h-6 w-11 rounded-full transition-colors ${optimistic ? 'bg-green-500' : 'bg-gray-700'}`}>
         <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${optimistic ? 'translate-x-5' : 'translate-x-0.5'}`} />

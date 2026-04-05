@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Mobile top bar */}
         <header className="flex items-center gap-3 border-b border-gray-800 bg-gray-900 px-4 py-3 md:hidden">
           <button
-            className="text-gray-400 hover:text-gray-100"
+            className="text-gray-400 hover:text-gray-100 active:opacity-60"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu size={20} />
@@ -94,7 +94,7 @@ function NavLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-gray-800 hover:text-gray-100 ${
+      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-gray-800 hover:text-gray-100 active:bg-gray-700 active:opacity-80 ${
         isActive ? 'bg-gray-800 text-gray-100' : 'text-gray-400'
       }`}
     >

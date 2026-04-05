@@ -71,7 +71,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading || !password}
-            className="w-full rounded-xl bg-violet-600 py-3 text-sm font-bold text-white transition hover:bg-violet-500 disabled:opacity-50"
+            className="w-full rounded-xl bg-violet-600 py-3 text-sm font-bold text-white transition hover:bg-violet-500 active:scale-95 active:bg-violet-700 disabled:opacity-50"
           >
             {loading ? '驗證中...' : '進入系統'}
           </button>

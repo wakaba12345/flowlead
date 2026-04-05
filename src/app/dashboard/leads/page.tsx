@@ -60,7 +60,7 @@ export default async function LeadsPage() {
               <Link
                 key={form.id}
                 href={`/dashboard/leads/${form.id}`}
-                className="group flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-900 px-5 py-4 transition hover:border-violet-500/50 hover:bg-gray-800/60"
+                className="group flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-900 px-5 py-4 transition hover:border-violet-500/50 hover:bg-gray-800/60 active:scale-[0.99] active:bg-gray-800"
               >
                 {/* Status dot */}
                 <div className="shrink-0">

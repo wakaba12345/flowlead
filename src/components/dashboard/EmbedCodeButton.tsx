@@ -17,7 +17,7 @@ export default function EmbedCodeButton({ formId }: { formId: string }) {
     <button
       onClick={copy}
       title="複製嵌入碼"
-      className="flex items-center gap-1.5 rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 transition hover:bg-gray-800"
+      className="flex items-center gap-1.5 rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 transition hover:bg-gray-800 active:scale-95 active:bg-gray-700"
     >
       {copied ? <Check size={12} className="text-green-400" /> : <Code size={12} />}
       {copied ? '已複製' : '嵌入碼'}
