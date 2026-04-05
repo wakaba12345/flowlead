@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.input-base {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(55 65 81);
+  background: rgb(17 24 39);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: rgb(209 213 219);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input-base:focus {
+  border-color: rgb(124 58 237);
+}
