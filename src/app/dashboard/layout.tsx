@@ -21,10 +21,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-30 flex w-56 shrink-0 flex-col border-r border-gray-800 bg-gray-900 px-4 py-6
-        transition-transform duration-200
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:static md:translate-x-0
+        fixed inset-y-0 left-0 z-30 w-56 shrink-0 flex-col border-r border-gray-800 bg-gray-900 px-4 py-6
+        ${sidebarOpen ? 'flex' : 'hidden'}
+        md:static md:flex
       `}>
         <div className="mb-8 flex items-center justify-between">
           <div>
