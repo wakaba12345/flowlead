@@ -60,24 +60,24 @@ export default async function FormsPage() {
         <div className="flex flex-col gap-2">
           {forms.map(form => (
             <div key={form.id}
-              className="flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-900 px-5 py-4">
+              className="flex flex-col gap-3 rounded-xl border border-gray-800 bg-gray-900 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
 
-              {/* Toggle */}
-              <StatusToggle formId={form.id} currentStatus={form.status} />
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-sm truncate">{form.title}</p>
-                  <EndDateBadge endsAt={form.ends_at} />
+              {/* Toggle + Info */}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <StatusToggle formId={form.id} currentStatus={form.status} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-sm truncate">{form.title}</p>
+                    <EndDateBadge endsAt={form.ends_at} />
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-600">
+                    {form.schema?.questions?.length || 0} 題 · 建立 {new Date(form.created_at).toLocaleDateString('zh-TW')}
+                  </p>
                 </div>
-                <p className="mt-0.5 text-xs text-gray-600">
-                  {form.schema?.questions?.length || 0} 題 · 建立 {new Date(form.created_at).toLocaleDateString('zh-TW')}
-                </p>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
                 <EmbedCodeButton formId={form.id} />
                 <Link href={`/dashboard/forms/${form.id}/preview`}
                   className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs text-orange-400 transition hover:bg-orange-500/20">
