@@ -6,6 +6,7 @@ import { useFlowLeadState } from '../useFlowLeadState'
 import { useIsMobile } from '../useIsMobile'
 import { WidgetFieldInput } from '../WidgetFieldInput'
 import { HookTextBanner } from '../HookTextBanner'
+import { OtherOptionInput } from '../OtherOptionInput'
 
 const slide = {
   enter: { x: 40, opacity: 0 },
@@ -62,6 +63,12 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
     } else {
       pick(current, opt)
     }
+  }
+
+  function handlePickOther(text: string) {
+    const val = '其他:' + text
+    if (widgetState === 'idle') pick(questions[0], val, true)
+    else pick(current, val)
   }
 
   const questionLabel = widgetState === 'idle'
@@ -154,7 +161,7 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 3, height: 14, background: accent, borderRadius: 1 }} />
                 <span style={{ fontSize: 11, fontWeight: 800, color: '#FFFFFF', letterSpacing: '.5px', textTransform: 'uppercase' }}>
-                  {widgetState === 'idle' ? schema.form_title : questionLabel}
+                  {schema.form_title}{widgetState === 'answering' && ` · ${currentIndex + 1} / ${total}`}
                 </span>
               </div>
               {responseCount && widgetState === 'idle' && (
@@ -163,12 +170,13 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
             </div>
 
             <div style={{ padding: '12px 14px' }}>
-              {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="default" />}
+              <HookTextBanner text={schema.hook_text || ''} variant="storm" />
               <p style={{ fontSize: 15, fontWeight: 800, color: textColor, margin: '0 0 10px', lineHeight: 1.35 }}>
                 {activeQuestion?.question_text}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {activeQuestion?.options.map(opt => {
+                  if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg={inputBg} />
                   const isSelected = tapped === opt
                   return (
                     <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}
@@ -208,7 +216,7 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 3, height: 16, background: accent, borderRadius: 1 }} />
               <span style={{ fontSize: 11, fontWeight: 800, color: '#FFFFFF', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                {widgetState === 'idle' ? schema.form_title : questionLabel}
+                {schema.form_title}{widgetState === 'answering' && ` · ${currentIndex + 1} / ${total}`}
               </span>
             </div>
             {responseCount && widgetState === 'idle' && (
@@ -220,7 +228,7 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
           <div style={{ display: 'flex', minHeight: 180, alignItems: 'stretch' }}>
             {/* Left 40% */}
             <div style={{ width: '40%', padding: '20px 24px', borderRight: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="default" />}
+              <HookTextBanner text={schema.hook_text || ''} variant="storm" />
               <p style={{ fontSize: 18, fontWeight: 800, color: textColor, margin: 0, lineHeight: 1.5 }}>
                 {activeQuestion?.question_text}
               </p>
@@ -229,6 +237,7 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
             {/* Right 60% */}
             <div style={{ width: '60%', padding: '20px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}>
               {activeQuestion?.options.map(opt => {
+                if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg={inputBg} />
                 const isSelected = tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}

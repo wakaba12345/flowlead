@@ -6,6 +6,7 @@ import { useFlowLeadState } from '../useFlowLeadState'
 import { useIsMobile } from '../useIsMobile'
 import { WidgetFieldInput } from '../WidgetFieldInput'
 import { HookTextBanner } from '../HookTextBanner'
+import { OtherOptionInput } from '../OtherOptionInput'
 
 const slide = {
   enter: { x: 40, opacity: 0 },
@@ -65,9 +66,15 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
     }
   }
 
+  function handlePickOther(text: string) {
+    const val = '其他:' + text
+    if (widgetState === 'idle') pick(questions[0], val, true)
+    else pick(current, val)
+  }
+
   const questionLabel = widgetState === 'idle'
     ? schema.form_title
-    : `${currentIndex + 1} / ${total}`
+    : `${schema.form_title} · ${currentIndex + 1} / ${total}`
 
   // ── THANK YOU ──
   if (widgetState === 'thank_you') {
@@ -155,7 +162,7 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
         <AnimatePresence mode="wait">
           <motion.div key={animKey} variants={slide} initial="enter" animate="center" exit="exit" transition={spring}
             style={{ padding: '14px 16px' }}>
-            {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="dark" />}
+            <HookTextBanner text={schema.hook_text || ''} variant="dark" />
             {/* Label */}
             <div style={{ marginBottom: 10 }}>
               <span style={{ fontSize: 10, fontWeight: 600, color: mutedColor, letterSpacing: '.8px', textTransform: 'uppercase' }}>{questionLabel}</span>
@@ -169,6 +176,7 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
             {/* Mobile options: 2-column grid with circle + text */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
               {activeQuestion?.options.map((opt, i) => {
+                if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg="#0d1824" />
                 const isSelected = tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.95 }} onClick={() => handlePick(opt)}
@@ -214,7 +222,7 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
 
           {/* Left 38% — title + question */}
           <div style={{ width: '38%', padding: '0 16px', borderRight: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="dark" />}
+            <HookTextBanner text={schema.hook_text || ''} variant="dark" />
             <span style={{ fontSize: 10, fontWeight: 700, color: mutedColor, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
               {questionLabel}
             </span>
@@ -231,6 +239,7 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
             {/* Options in 2-column grid of circles */}
             <div style={{ display: 'grid', gridTemplateColumns: (activeQuestion?.options.length ?? 0) <= 3 ? `repeat(${activeQuestion?.options.length ?? 2}, 1fr)` : 'repeat(4, 1fr)', gap: '8px 10px' }}>
               {activeQuestion?.options.map((opt, i) => {
+                if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg="#0d1824" />
                 const isSelected = tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.95 }} onClick={() => handlePick(opt)}

@@ -6,28 +6,32 @@ import type { Form } from '@/types'
 import { ChevronRight, Users, CalendarDays, Clock } from 'lucide-react'
 
 export default async function LeadsPage() {
-  const [formsRes, responsesRes] = await Promise.all([
-    supabaseAdmin
-      .from('forms')
-      .select('*')
-      .neq('status', 'archived')
-      .order('created_at', { ascending: false }),
-    supabaseAdmin
-      .from('responses')
-      .select('form_id')
-      .eq('completed', true)
-      .eq('is_test', false),
-  ])
+  const formsRes = await supabaseAdmin
+    .from('forms')
+    .select('*')
+    .neq('status', 'archived')
+    .order('created_at', { ascending: false })
 
   const forms = (formsRes.data || []) as Form[]
-  const allResponses = responsesRes.data || []
+
+  // Fetch exact counts per form in parallel (avoids the 1000-row default cap)
+  const countResults = await Promise.all(
+    forms.map(f =>
+      supabaseAdmin
+        .from('responses')
+        .select('*', { count: 'exact', head: true })
+        .eq('form_id', f.id)
+        .eq('completed', true)
+        .eq('is_test', false)
+    )
+  )
 
   const countMap: Record<string, number> = {}
-  for (const r of allResponses) {
-    countMap[r.form_id] = (countMap[r.form_id] || 0) + 1
+  for (let i = 0; i < forms.length; i++) {
+    countMap[forms[i].id] = countResults[i].count || 0
   }
 
-  const totalLeads = allResponses.length
+  const totalLeads = Object.values(countMap).reduce((s, n) => s + n, 0)
 
   return (
     <div>

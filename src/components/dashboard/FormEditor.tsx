@@ -27,6 +27,7 @@ export default function FormEditor({ initialForm }: Props) {
   const isEdit = !!initialForm
 
   const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'ai' | 'manual'>(initialForm ? 'ai' : 'ai')
   const [questionCount, setQuestionCount] = useState(initialForm?.schema?.questions?.length || 3)
 
   const [aiInput, setAiInput] = useState({
@@ -118,6 +119,12 @@ export default function FormEditor({ initialForm }: Props) {
       options: q.options.filter((_, oidx) => oidx !== oi),
     }))
   }
+  function addOtherOption(qi: number) {
+    setQuestions(qs => qs.map((q, idx) => {
+      if (idx !== qi || q.options.includes('__other__')) return q
+      return { ...q, options: [...q.options, '__other__'] }
+    }))
+  }
 
   async function handleGenerateHook() {
     setHookLoading(true)
@@ -189,12 +196,31 @@ export default function FormEditor({ initialForm }: Props) {
     }
   }
 
+  function handleSwitchToManual() {
+    setMode('manual')
+    if (!generatedSchema) {
+      const emptySchema: FormSchema = {
+        form_title: formTitle,
+        questions: [{ id: `q${Date.now()}`, type: 'single_choice', question_text: '', options: ['', ''] }],
+        lead_capture: {
+          title: '',
+          description: '',
+          fields: leadFields,
+          button_text: '立即送出',
+        },
+      }
+      setGeneratedSchema(emptySchema)
+      setQuestions(emptySchema.questions)
+    }
+  }
+
   async function handleSave() {
-    if (!generatedSchema) return
+    if (!formTitle) return
     setLoading(true)
 
     const finalSchema: FormSchema = {
-      ...generatedSchema,
+      ...(generatedSchema || {}),
+      form_title: formTitle,
       questions,
       hook_text: hookText || undefined,
       lead_capture: {
@@ -241,7 +267,32 @@ export default function FormEditor({ initialForm }: Props) {
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* AI generation section (new only, or re-generate for edit) */}
+        {/* Mode toggle */}
+        {!isEdit && (
+          <div className="flex rounded-xl border border-gray-800 bg-gray-900 p-1 gap-1">
+            <button
+              type="button"
+              onClick={handleSwitchToManual}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition ${
+                mode === 'manual' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <Plus size={14} /> 手動建立
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('ai')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition ${
+                mode === 'ai' ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <Sparkles size={14} /> AI 自動生成
+            </button>
+          </div>
+        )}
+
+        {/* AI generation section */}
+        {mode === 'ai' && (
         <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
           <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-violet-400">
             <Sparkles size={12} /> AI 生成問卷
@@ -301,6 +352,7 @@ export default function FormEditor({ initialForm }: Props) {
             </button>
           </div>
         </div>
+        )}
 
         {/* Questions preview */}
         {generatedSchema && (
@@ -367,14 +419,23 @@ export default function FormEditor({ initialForm }: Props) {
                     <div className="ml-7 space-y-1.5">
                       {q.options.map((opt, oi) => (
                         <div key={oi} className="flex items-center gap-2">
-                          <span className="shrink-0 h-4 w-4 rounded-full border border-gray-600 bg-gray-900" />
-                          <input
-                            className="flex-1 rounded border border-gray-600 bg-gray-900 px-2.5 py-1 text-xs text-gray-300 outline-none placeholder:text-gray-600 focus:border-violet-500"
-                            placeholder={`選項 ${oi + 1}`}
-                            value={opt}
-                            onChange={e => updateOption(i, oi, e.target.value)}
-                          />
-                          <button onClick={() => removeOption(i, oi)} disabled={q.options.length <= 2}
+                          {opt === '__other__' ? (
+                            <>
+                              <span className="shrink-0 h-4 w-4 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center text-[9px]">✏️</span>
+                              <span className="flex-1 rounded border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs text-gray-500 italic">其他（自填）</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="shrink-0 h-4 w-4 rounded-full border border-gray-600 bg-gray-900" />
+                              <input
+                                className="flex-1 rounded border border-gray-600 bg-gray-900 px-2.5 py-1 text-xs text-gray-300 outline-none placeholder:text-gray-600 focus:border-violet-500"
+                                placeholder={`選項 ${oi + 1}`}
+                                value={opt}
+                                onChange={e => updateOption(i, oi, e.target.value)}
+                              />
+                            </>
+                          )}
+                          <button onClick={() => removeOption(i, oi)} disabled={opt !== '__other__' && q.options.filter(o => o !== '__other__').length <= 2}
                             className="shrink-0 text-gray-600 hover:text-red-400 disabled:opacity-30">
                             <X size={13} />
                           </button>
@@ -384,6 +445,12 @@ export default function FormEditor({ initialForm }: Props) {
                         className="flex items-center gap-1 pl-6 text-xs text-gray-500 hover:text-violet-400 transition">
                         <Plus size={11} /> 新增選項
                       </button>
+                      {!q.options.includes('__other__') && (
+                        <button onClick={() => addOtherOption(i)}
+                          className="flex items-center gap-1 pl-6 text-xs text-gray-500 hover:text-indigo-400 transition">
+                          <Plus size={11} /> 新增「其他（自填）」
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

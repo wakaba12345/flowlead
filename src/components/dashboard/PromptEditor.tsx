@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Save } from 'lucide-react'
+import PromptHistory, { saveToHistory } from './PromptHistory'
 
 interface Props {
   promptId?: string
   initialText: string
+  promptKey?: string
 }
 
-export default function PromptEditor({ promptId, initialText }: Props) {
+export default function PromptEditor({ promptId, initialText, promptKey }: Props) {
   const [text, setText] = useState(initialText)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -22,6 +23,7 @@ export default function PromptEditor({ promptId, initialText }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: promptId, prompt_text: text }),
     })
+    if (promptKey) saveToHistory(promptKey, text)
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -45,6 +47,9 @@ export default function PromptEditor({ promptId, initialText }: Props) {
           {saving ? '儲存中...' : saved ? '已儲存 ✓' : '儲存 Prompt'}
         </button>
       </div>
+      {promptKey && (
+        <PromptHistory promptKey={promptKey} onRestore={t => setText(t)} />
+      )}
     </div>
   )
 }

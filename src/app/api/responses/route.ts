@@ -57,13 +57,15 @@ export async function GET(req: NextRequest) {
 
   if (!formId) return NextResponse.json({ error: 'form_id required' }, { status: 400 })
 
+  const noLimit = url.searchParams.get('no_limit') === '1'
   let query = supabaseAdmin
     .from('responses')
     .select('*')
     .eq('form_id', formId)
     .eq('completed', true)
     .order('created_at', { ascending: false })
-    .limit(500)
+
+  if (!noLimit) query = query.limit(500)
 
   if (!includeTest) {
     query = query.eq('is_test', false)

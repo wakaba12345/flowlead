@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { LayoutDashboard, FileText, Users, Settings, Menu, X } from 'lucide-react'
+import { LayoutDashboard, FileText, Users, Settings, Menu, X, Gift } from 'lucide-react'
 import LogoutButton from '@/components/dashboard/LogoutButton'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <NavLink href="/dashboard" icon={<LayoutDashboard size={16} />} onClick={() => setSidebarOpen(false)}>總覽</NavLink>
           <NavLink href="/dashboard/forms" icon={<FileText size={16} />} onClick={() => setSidebarOpen(false)}>表單管理</NavLink>
           <NavLink href="/dashboard/leads" icon={<Users size={16} />} onClick={() => setSidebarOpen(false)}>名單</NavLink>
+          <NavLink href="/dashboard/lottery" icon={<Gift size={16} />} onClick={() => setSidebarOpen(false)}>抽獎</NavLink>
           <NavLink href="/dashboard/settings" icon={<Settings size={16} />} onClick={() => setSidebarOpen(false)}>設定</NavLink>
         </nav>
 

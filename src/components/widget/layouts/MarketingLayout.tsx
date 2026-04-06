@@ -6,6 +6,7 @@ import { useFlowLeadState } from '../useFlowLeadState'
 import { useIsMobile } from '../useIsMobile'
 import { WidgetFieldInput } from '../WidgetFieldInput'
 import { HookTextBanner } from '../HookTextBanner'
+import { OtherOptionInput } from '../OtherOptionInput'
 
 const slide = {
   enter: { x: 40, opacity: 0 },
@@ -61,6 +62,12 @@ export default function MarketingLayout({ formId, schema, theme, isTest = false,
     } else {
       pick(current, opt)
     }
+  }
+
+  function handlePickOther(text: string) {
+    const val = '其他:' + text
+    if (widgetState === 'idle') pick(questions[0], val, true)
+    else pick(current, val)
   }
 
   // ── THANK YOU ──
@@ -136,6 +143,7 @@ export default function MarketingLayout({ formId, schema, theme, isTest = false,
   // ── IDLE / ANSWERING ──
   const animKey = widgetState === 'idle' ? 'idle' : currentIndex
   const qLabel = widgetState === 'idle' ? 1 : currentIndex + 1
+  const formLabel = widgetState === 'answering' ? `${schema.form_title} · Q ${qLabel}/${total}` : schema.form_title
 
   if (isMobile) {
     return (
@@ -148,13 +156,14 @@ export default function MarketingLayout({ formId, schema, theme, isTest = false,
         <AnimatePresence mode="wait">
           <motion.div key={animKey} variants={slide} initial="enter" animate="center" exit="exit" transition={spring}
             style={{ padding: '14px 14px' }}>
-            {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="default" />}
+            <HookTextBanner text={schema.hook_text || ''} variant="default" />
+            {/* Form title */}
+            <p style={{ fontSize: 10, fontWeight: 700, color: mutedColor, letterSpacing: '.5px', textTransform: 'uppercase', margin: '0 0 6px' }}>{formLabel}</p>
             {/* Badge + question counter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
               <div style={{ background: `${accent}15`, borderRadius: 99, padding: '2px 8px' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: accent }}>快速測驗</span>
               </div>
-              <span style={{ fontSize: 11, color: mutedColor }}>Q {qLabel}/{total}</span>
               {responseCount && widgetState === 'idle' && (
                 <span style={{ fontSize: 10, color: accent, marginLeft: 'auto' }}>🔥 {responseCount.toLocaleString()} 人</span>
               )}
@@ -165,6 +174,7 @@ export default function MarketingLayout({ formId, schema, theme, isTest = false,
             {/* 2-column grid options */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {activeQuestion?.options.map(opt => {
+                if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor="#111" borderColor="#e5e7eb" />
                 const isSelected = tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.95 }} onClick={() => handlePick(opt)}
@@ -204,7 +214,8 @@ export default function MarketingLayout({ formId, schema, theme, isTest = false,
 
           {/* Left 42% — badge + question */}
           <div style={{ width: '42%', padding: '16px 20px', background: '#FAFAFA', borderRight: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="default" />}
+            <HookTextBanner text={schema.hook_text || ''} variant="default" />
+            <p style={{ fontSize: 10, fontWeight: 700, color: mutedColor, letterSpacing: '.5px', textTransform: 'uppercase', margin: '0 0 8px' }}>{formLabel}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <div style={{ background: `${accent}15`, borderRadius: 99, padding: '3px 10px' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: accent }}>🔥 快速測驗</span>
@@ -216,15 +227,13 @@ export default function MarketingLayout({ formId, schema, theme, isTest = false,
             <p style={{ fontSize: 20, fontWeight: 800, color: textColor, margin: '0 0 10px', lineHeight: 1.4 }}>
               {activeQuestion?.question_text}
             </p>
-            <span style={{ fontSize: 12, color: mutedColor, fontWeight: 600 }}>
-              Q {qLabel} / {total}
-            </span>
           </div>
 
           {/* Right 58% — 2-col option cards */}
           <div style={{ width: '58%', padding: '16px 16px', display: 'flex', alignItems: 'center' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }}>
               {activeQuestion?.options.map(opt => {
+                if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor="#111" borderColor="#e5e7eb" />
                 const isSelected = tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.95 }} onClick={() => handlePick(opt)}

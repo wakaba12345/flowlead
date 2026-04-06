@@ -4,8 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Form, Response } from '@/types'
-import LeadsTable from '@/components/dashboard/LeadsTable'
-import PieChart from '@/components/dashboard/PieChart'
+import LeadsAnalytics from '@/components/dashboard/LeadsAnalytics'
 import { ArrowLeft } from 'lucide-react'
 
 async function getData(formId: string, includeTest: boolean) {
@@ -16,8 +15,7 @@ async function getData(formId: string, includeTest: boolean) {
       .select('*')
       .eq('form_id', formId)
       .eq('completed', true)
-      .order('created_at', { ascending: false })
-      .limit(1000),
+      .order('created_at', { ascending: false }),
   ])
 
   if (formRes.error || !formRes.data) return null
@@ -44,22 +42,6 @@ export default async function FormLeadsPage({
   if (!result) notFound()
 
   const { form, responses } = result
-  const questions = form.schema?.questions || []
-
-  // Build answer stats per question
-  const stats = questions.map(q => {
-    const counts: Record<string, number> = {}
-    for (const r of responses) {
-      const ans = r.answers?.[q.id]
-      if (ans) counts[ans] = (counts[ans] || 0) + 1
-    }
-    const total = Object.values(counts).reduce((s, n) => s + n, 0)
-    return {
-      questionText: q.question_text,
-      total,
-      data: q.options.map(o => ({ label: o, count: counts[o] || 0 })),
-    }
-  })
 
   const now = new Date()
   const isExpired = form.ends_at ? new Date(form.ends_at) < now : false
@@ -70,7 +52,10 @@ export default async function FormLeadsPage({
     <div>
       {/* Header */}
       <div className="mb-6">
-        <Link href="/dashboard/leads" className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition mb-3">
+        <Link
+          href="/dashboard/leads"
+          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition mb-3"
+        >
           <ArrowLeft size={13} /> 所有表單
         </Link>
         <div className="flex items-start justify-between gap-4">
@@ -102,26 +87,8 @@ export default async function FormLeadsPage({
         </div>
       </div>
 
-      {/* Pie charts */}
-      {stats.length > 0 && realCount > 0 && (
-        <div className="mb-6">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">作答統計</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {stats.map((s, i) => (
-              <PieChart key={i} title={`Q${i + 1}｜${s.questionText}`} data={s.data} total={s.total} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Response table */}
-      <LeadsTable
-        leads={responses}
-        forms={[form]}
-        schema={form.schema}
-        includeTest={includeTest}
-        singleForm
-      />
+      {/* Analytics: charts + filters + table */}
+      <LeadsAnalytics responses={responses} form={form} includeTest={includeTest} />
     </div>
   )
 }

@@ -107,6 +107,7 @@ export const PRESET_LEAD_FIELDS: LeadField[] = [
   { id: 'gender', label: '性別', type: 'radio', options: ['男', '女', '其他'], required: false },
   { id: 'age', label: '年齡', type: 'text', placeholder: '例：28', required: false },
   { id: 'address', label: '地址', type: 'text', placeholder: '請輸入地址', required: false },
-  { id: 'income', label: '年收入', type: 'select', options: ['30萬以下', '30-60萬', '60-100萬', '100萬以上'], required: false },
+  { id: 'income', label: '年收入', type: 'select', options: ['30萬以下', '30-60萬', '60-100萬', '100~200萬', '200~300萬', '300~500萬', '500萬以上'], required: false },
+  { id: 'marital', label: '婚姻狀況', type: 'radio', options: ['未婚', '已婚', '離婚', '喪偶'], required: false },
   { id: 'has_children', label: '有無子女', type: 'radio', options: ['有', '無'], required: false },
 ]

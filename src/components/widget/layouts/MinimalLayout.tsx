@@ -6,6 +6,7 @@ import { useFlowLeadState } from '../useFlowLeadState'
 import { useIsMobile } from '../useIsMobile'
 import { WidgetFieldInput } from '../WidgetFieldInput'
 import { HookTextBanner } from '../HookTextBanner'
+import { OtherOptionInput } from '../OtherOptionInput'
 
 const slide = {
   enter: { x: 40, opacity: 0 },
@@ -64,7 +65,14 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
     }
   }
 
-  const qLabel = widgetState === 'idle' ? `步驟 1 / ${total}` : `步驟 ${currentIndex + 1} / ${total}`
+  function handlePickOther(text: string) {
+    const val = '其他:' + text
+    if (widgetState === 'idle') pick(questions[0], val, true)
+    else pick(current, val)
+  }
+
+  const stepNum = widgetState === 'idle' ? 1 : currentIndex + 1
+  const qLabel = `${schema.form_title} · 步驟 ${stepNum} / ${total}`
 
   // ── THANK YOU ──
   if (widgetState === 'thank_you') {
@@ -143,7 +151,7 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
         <AnimatePresence mode="wait">
           <motion.div key={animKey} variants={slide} initial="enter" animate="center" exit="exit" transition={spring}
             style={{ padding: '14px 16px' }}>
-            {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="default" />}
+            <HookTextBanner text={schema.hook_text || ''} variant="indigo" />
             <p style={{ fontSize: 10, fontWeight: 600, color: accent, letterSpacing: '.8px', textTransform: 'uppercase', marginBottom: 3 }}>
               {qLabel}
             </p>
@@ -155,6 +163,7 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {activeQuestion?.options.map(opt => {
+                if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} />
                 const isSelected = tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}
@@ -199,7 +208,7 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
 
           {/* Left 45% */}
           <div style={{ width: '45%', padding: '16px 20px', borderRight: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            {widgetState === 'idle' && <HookTextBanner text={schema.hook_text || ''} variant="default" />}
+            <HookTextBanner text={schema.hook_text || ''} variant="indigo" />
             <p style={{ fontSize: 11, fontWeight: 600, color: accent, letterSpacing: '.8px', textTransform: 'uppercase', margin: '0 0 8px' }}>
               {qLabel}
             </p>
@@ -214,6 +223,7 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
           {/* Right 55% — clean list options */}
           <div style={{ width: '55%', padding: '16px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
             {activeQuestion?.options.map(opt => {
+              if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} />
               const isSelected = tapped === opt
               return (
                 <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}
