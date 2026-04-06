@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Download, FlaskConical, X, ChevronRight, Link as LinkIcon } from 'lucide-react'
+import { Download, FlaskConical, X, ChevronRight, Link as LinkIcon, Copy, Check, ExternalLink } from 'lucide-react'
 import type { Response, Form } from '@/types'
 import ReportButton from '@/components/dashboard/ReportButton'
 import ReportHistory from '@/components/dashboard/ReportHistory'
@@ -46,6 +46,16 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
   const [filters, setFilters] = useState<Filter[]>([])
   const [selected, setSelected] = useState<Response | null>(null)
   const [otherExpanded, setOtherExpanded] = useState<Record<string, boolean>>({})
+  const [latestShareUrl, setLatestShareUrl] = useState<string | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
+
+  function copyShareUrl() {
+    if (!latestShareUrl) return
+    navigator.clipboard.writeText(latestShareUrl).then(() => {
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    })
+  }
   const questions = form.schema?.questions || []
 
   const filtered = useMemo(() =>
@@ -200,8 +210,32 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
             自動分析{filters.length > 0 ? '篩選後的' : '全部'} <span className="text-violet-300 font-medium">{filtered.length}</span> 筆名單，找出性別／年齡／收入的偏好差異與離群值
           </p>
         </div>
-        <ReportButton responses={filtered} form={form} />
+        <ReportButton responses={filtered} form={form} onShareReady={url => { setLatestShareUrl(url) }} />
       </div>
+
+      {/* Share URL bar — shown after report is generated */}
+      {latestShareUrl && (
+        <div className="mb-3 flex items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-950/40 px-4 py-3">
+          <LinkIcon size={14} className="shrink-0 text-violet-400" />
+          <span className="min-w-0 flex-1 truncate text-xs text-violet-300">{latestShareUrl}</span>
+          <button
+            onClick={copyShareUrl}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+          >
+            {shareCopied ? <Check size={12} /> : <Copy size={12} />}
+            {shareCopied ? '已複製' : '複製連結'}
+          </button>
+          <a
+            href={latestShareUrl}
+            target="_blank"
+            rel="noopener"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+          >
+            <ExternalLink size={12} />
+            開啟
+          </a>
+        </div>
+      )}
 
       {/* Report history */}
       <div className="mb-6">
