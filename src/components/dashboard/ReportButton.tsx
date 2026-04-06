@@ -265,7 +265,7 @@ export default function ReportButton({ responses, form }: Props) {
         const shareRes = await fetch('/api/reports/share', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ html, form_title: form.title }),
+          body: JSON.stringify({ html, form_title: form.title, form_id: form.id }),
         })
         const { id } = await shareRes.json()
         if (id) {

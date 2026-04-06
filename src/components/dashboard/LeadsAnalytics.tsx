@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Download, FlaskConical, X, ChevronRight, Link as LinkIcon } from 'lucide-react'
 import type { Response, Form } from '@/types'
 import ReportButton from '@/components/dashboard/ReportButton'
+import ReportHistory from '@/components/dashboard/ReportHistory'
 
 const COLORS = ['#7c3aed','#06b6d4','#f59e0b','#10b981','#ef4444','#8b5cf6','#3b82f6','#f97316','#ec4899','#14b8a6']
 const SKIP_KEYS = new Set(['Email','電話','地址','email','phone','address','姓名','name'])
@@ -192,7 +193,7 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
       )}
 
       {/* AI Report CTA */}
-      <div className="mb-6 flex items-center justify-between rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-950/60 to-indigo-950/60 px-5 py-4">
+      <div className="mb-3 flex items-center justify-between rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-950/60 to-indigo-950/60 px-5 py-4">
         <div>
           <p className="font-semibold text-gray-100">AI 數據分析報告</p>
           <p className="mt-0.5 text-xs text-gray-400">
@@ -200,6 +201,11 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
           </p>
         </div>
         <ReportButton responses={filtered} form={form} />
+      </div>
+
+      {/* Report history */}
+      <div className="mb-6">
+        <ReportHistory formId={form.id} />
       </div>
 
       {/* Charts */}
