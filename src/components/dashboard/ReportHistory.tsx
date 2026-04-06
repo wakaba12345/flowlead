@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { FileText, ExternalLink, Trash2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { FileText, ExternalLink, Trash2, RefreshCw, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 
 interface ReportRecord {
   id: string
@@ -18,6 +18,15 @@ export default function ReportHistory({ formId }: Props) {
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  function copyLink(id: string) {
+    const url = `${window.location.origin}/r/${id}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -99,11 +108,19 @@ export default function ReportHistory({ formId }: Props) {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => copyLink(r.id)}
+                      className="flex items-center gap-1 rounded-lg bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-300 hover:bg-gray-700 transition"
+                      title="複製分享連結"
+                    >
+                      {copiedId === r.id ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+                      {copiedId === r.id ? '已複製' : '複製連結'}
+                    </button>
                     <a
                       href={`/r/${r.id}`}
                       target="_blank"
                       rel="noopener"
-                      className="flex items-center gap-1 rounded-lg bg-violet-600/20 px-3 py-1.5 text-xs font-semibold text-violet-300 hover:bg-violet-600/40 transition"
+                      className="flex items-center gap-1 rounded-lg bg-violet-600/20 px-2.5 py-1.5 text-xs font-semibold text-violet-300 hover:bg-violet-600/40 transition"
                     >
                       <ExternalLink size={12} />
                       開啟

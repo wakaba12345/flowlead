@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2, Link2, Copy, Check, ExternalLink } from 'lucide-react'
 import type { Response, Form } from '@/types'
 
 const AGE_ORDER    = ['17以下','18-24','25-34','35-44','45-54','55-64','65以上']
@@ -157,6 +157,16 @@ interface Props {
 
 export default function ReportButton({ responses, form }: Props) {
   const [loading, setLoading] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  function copyLink() {
+    if (!shareUrl) return
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   function buildStats() {
     const questions = form.schema?.questions || []
@@ -269,8 +279,9 @@ export default function ReportButton({ responses, form }: Props) {
         })
         const { id } = await shareRes.json()
         if (id) {
-          const shareUrl = `${window.location.origin}/r/${id}`
-          finalHtml = injectShareBar(html, shareUrl)
+          const url = `${window.location.origin}/r/${id}`
+          setShareUrl(url)
+          finalHtml = injectShareBar(html, url)
         }
       } catch {
         // Share save failed — still open the report without share bar
@@ -290,13 +301,38 @@ export default function ReportButton({ responses, form }: Props) {
   }
 
   return (
-    <button
-      onClick={generate}
-      disabled={loading || responses.length === 0}
-      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition hover:from-violet-500 hover:to-indigo-500 disabled:opacity-40"
-    >
-      {loading ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-      {loading ? 'AI 分析中...' : '生成 AI 報告'}
-    </button>
+    <div className="flex flex-col items-end gap-2">
+      <button
+        onClick={generate}
+        disabled={loading || responses.length === 0}
+        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition hover:from-violet-500 hover:to-indigo-500 disabled:opacity-40"
+      >
+        {loading ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+        {loading ? 'AI 分析中...' : '生成 AI 報告'}
+      </button>
+
+      {shareUrl && (
+        <div className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-950/50 px-3 py-2">
+          <Link2 size={13} className="shrink-0 text-violet-400" />
+          <span className="max-w-[200px] truncate text-xs text-violet-300">{shareUrl}</span>
+          <button
+            onClick={copyLink}
+            className="ml-1 flex items-center gap-1 rounded-md bg-violet-600/30 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+          >
+            {copied ? <Check size={11} /> : <Copy size={11} />}
+            {copied ? '已複製' : '複製'}
+          </button>
+          <a
+            href={shareUrl}
+            target="_blank"
+            rel="noopener"
+            className="flex items-center gap-1 rounded-md bg-violet-600/30 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+          >
+            <ExternalLink size={11} />
+            開啟
+          </a>
+        </div>
+      )}
+    </div>
   )
 }
