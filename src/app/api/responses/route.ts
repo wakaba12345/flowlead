@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { isAuthenticated } from '@/lib/auth'
 import { createHash } from 'crypto'
 
 export async function POST(req: NextRequest) {
@@ -40,17 +41,28 @@ export async function POST(req: NextRequest) {
 
   // Fire webhook (skip for test data)
   if (form.webhook_url && !body.is_test) {
-    fetch(form.webhook_url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'lead.created', form_id: body.form_id, response: data }),
-    }).catch(() => {})
+    try {
+      const webhookUrl = new URL(form.webhook_url)
+      // Only allow https webhooks to prevent SSRF to internal services
+      if (webhookUrl.protocol === 'https:') {
+        fetch(form.webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: 'lead.created', form_id: body.form_id, response: data }),
+          signal: AbortSignal.timeout(5000),
+        }).catch(() => {})
+      }
+    } catch {
+      // Invalid URL — skip silently
+    }
   }
 
   return NextResponse.json(data, { status: 201 })
 }
 
 export async function GET(req: NextRequest) {
+  if (!isAuthenticated(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const url = new URL(req.url)
   const formId = url.searchParams.get('form_id')
   const includeTest = url.searchParams.get('include_test') === '1'

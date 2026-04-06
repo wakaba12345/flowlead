@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
 
   const text = message.content[0].type === 'text' ? message.content[0].text : ''
 
-  console.log('[report] raw text length:', text.length, '| first 200 chars:', text.slice(0, 200))
 
   // Robustly strip markdown code fences — handle ```html, ```, or bare HTML
   let html = text.trim()
@@ -115,8 +114,6 @@ export async function POST(req: NextRequest) {
       html = html.slice(0, insertAt) + chartsBlock + html.slice(insertAt)
     }
   }
-
-  console.log('[report] final html length:', html.length)
 
   return NextResponse.json({ html })
 }

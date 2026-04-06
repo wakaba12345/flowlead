@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { isAuthenticated } from '@/lib/auth'
 
 // GET /api/reports/share?form_id=xxx  → list reports for a form
 export async function GET(req: NextRequest) {
+  if (!isAuthenticated(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const form_id = req.nextUrl.searchParams.get('form_id')
   if (!form_id) return NextResponse.json({ error: 'Missing form_id' }, { status: 400 })
 
@@ -19,6 +21,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/reports/share  → save report, return id
 export async function POST(req: NextRequest) {
+  if (!isAuthenticated(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { html, form_title, form_id } = await req.json()
   if (!html || !form_title) {
     return NextResponse.json({ error: 'Missing html or form_title' }, { status: 400 })
@@ -36,6 +39,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/reports/share?id=xxx  → delete a report
 export async function DELETE(req: NextRequest) {
+  if (!isAuthenticated(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 

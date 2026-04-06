@@ -77,7 +77,7 @@ function barChartHtml(title: string, entries: [string, number][], isQuestion = f
     const c = COLORS[i % COLORS.length]
     // print-color-adjust:exact ensures bar and badge colors survive browser PDF printing
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <span style="flex:0 0 auto;min-width:${isQuestion ? '200px' : '80px'};max-width:${isQuestion ? '260px' : '120px'};font-size:13px;color:#374151;line-height:1.3">${label}</span>
+      <span style="flex:0 0 auto;min-width:${isQuestion ? 'min(200px,40%)' : 'min(80px,30%)'};max-width:${isQuestion ? '260px' : '120px'};font-size:13px;color:#374151;line-height:1.3;word-break:break-word">${label}</span>
       <span class="rpt-badge" style="flex:0 0 auto;background:${c};color:white;border-radius:6px;padding:2px 10px;font-size:13px;font-weight:600;min-width:44px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">${n}</span>
       <div style="flex:1;height:10px;background:#f3f4f6;border-radius:5px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact">
         <div style="height:100%;width:${w}%;background:${c};border-radius:5px;opacity:.9;-webkit-print-color-adjust:exact;print-color-adjust:exact"></div>
@@ -143,7 +143,7 @@ function buildQuestionChartsHtml(
     }
   })
 
-  const grid = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px${otherBlocks.length ? ';margin-bottom:16px' : ''}">${chartItems.join('')}</div>`
+  const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px${otherBlocks.length ? ';margin-bottom:16px' : ''}">${chartItems.join('')}</div>`
   const others = otherBlocks.length ? `<div style="display:flex;flex-direction:column;gap:12px">${otherBlocks.join('')}</div>` : ''
   return grid + others
 }
@@ -230,18 +230,34 @@ export default function ReportButton({ responses, form, onShareReady }: Props) {
   }
 
   function injectShareBar(html: string, shareUrl: string): string {
+    // Escape for safe use in HTML attribute and JS string (URL is always our own origin + UUID,
+    // but encode defensively to prevent any attribute/script injection)
+    const safeUrl = shareUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;')
+    const jsUrl = JSON.stringify(shareUrl) // safely quoted for use inside <script>
+
     const bar = `
-<div id="rpt-share-bar" style="position:sticky;top:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:10px 24px;display:flex;align-items:center;gap:14px;font-family:system-ui,-apple-system,sans-serif">
+<div id="rpt-share-bar" style="position:sticky;top:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:system-ui,-apple-system,sans-serif">
   <span style="font-size:11px;font-weight:600;color:#94a3b8;white-space:nowrap;letter-spacing:.5px">分享連結</span>
-  <span style="flex:1;font-size:12px;color:#818cf8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shareUrl}</span>
-  <button
-    onclick="navigator.clipboard.writeText('${shareUrl}').then(()=>{this.textContent='已複製 ✓';this.style.color='#34d399';setTimeout(()=>{this.textContent='複製連結';this.style.color='';},2000)})"
+  <span style="flex:1;min-width:120px;font-size:12px;color:#818cf8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${safeUrl}</span>
+  <button id="rpt-copy-btn"
     style="flex-shrink:0;background:#334155;border:none;color:#e2e8f0;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer"
   >複製連結</button>
-  <a href="${shareUrl}" target="_blank" rel="noopener"
+  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
     style="flex-shrink:0;background:#4f46e5;color:white;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;text-decoration:none"
   >開啟分享頁</a>
   <style>@media print{#rpt-share-bar{display:none!important}}</style>
+  <script>
+    (function(){
+      var url=${jsUrl};
+      document.getElementById('rpt-copy-btn').addEventListener('click',function(){
+        var btn=this;
+        navigator.clipboard.writeText(url).then(function(){
+          btn.textContent='已複製 ✓';btn.style.color='#34d399';
+          setTimeout(function(){btn.textContent='複製連結';btn.style.color='';},2000);
+        });
+      });
+    })();
+  </script>
 </div>`
     return html.replace(/<body([^>]*)>/i, `<body$1>${bar}`)
   }
