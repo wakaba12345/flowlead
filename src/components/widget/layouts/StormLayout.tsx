@@ -37,11 +37,13 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
     fields,
     leadData,
     tapped,
+    multiSelected,
     submitting,
     errors,
     responseCount,
     progress,
     pick,
+    confirmMulti,
     submit,
     setLeadData,
     setError,
@@ -174,24 +176,52 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
               <p style={{ fontSize: 15, fontWeight: 800, color: textColor, margin: '0 0 10px', lineHeight: 1.35 }}>
                 {activeQuestion?.question_text}
               </p>
+              {activeQuestion?.type === 'multi_choice' && (
+                <p style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 8, letterSpacing: '.3px' }}>可複選多個選項</p>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {activeQuestion?.options.map(opt => {
                   if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg={inputBg} />
-                  const isSelected = tapped === opt
+                  const isMulti = activeQuestion?.type === 'multi_choice'
+                  const isSelected = isMulti ? multiSelected.includes(opt) : tapped === opt
                   return (
                     <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}
                       style={{
+                        display: 'flex', alignItems: 'center', gap: 7,
                         background: isSelected ? `${accent}08` : bg,
                         border: `1px solid ${isSelected ? accent : borderColor}`,
                         borderLeft: `3px solid ${isSelected ? accent : '#D0D0D0'}`,
                         borderRadius: 2, padding: '8px 10px', cursor: 'pointer', textAlign: 'left',
                         transition: 'all .12s',
                       }}>
+                      {isMulti && (
+                        <span style={{
+                          flexShrink: 0, width: 14, height: 14, borderRadius: 3,
+                          border: `1.5px solid ${isSelected ? accent : borderColor}`,
+                          background: isSelected ? accent : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {isSelected && <span style={{ width: 6, height: 6, background: '#fff', borderRadius: 1, display: 'block' }} />}
+                        </span>
+                      )}
                       <span style={{ fontSize: 12, fontWeight: isSelected ? 700 : 400, color: isSelected ? accent : textColor, lineHeight: 1.3 }}>{opt}</span>
                     </motion.button>
                   )
                 })}
               </div>
+              {activeQuestion?.type === 'multi_choice' && multiSelected.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  onClick={() => confirmMulti(activeQuestion!)}
+                  style={{
+                    marginTop: 10, width: '100%', background: accent, border: 'none',
+                    borderRadius: 2, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+                    color: '#fff', cursor: 'pointer', letterSpacing: '.5px', textTransform: 'uppercase',
+                  }}
+                >
+                  確認選擇（已選 {multiSelected.length} 項）
+                </motion.button>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>
@@ -236,13 +266,17 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
 
             {/* Right 60% */}
             <div style={{ width: '60%', padding: '20px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}>
+              {activeQuestion?.type === 'multi_choice' && (
+                <p style={{ fontSize: 11, color: accent, fontWeight: 600, margin: '0 0 4px', letterSpacing: '.3px' }}>可複選多個選項</p>
+              )}
               {activeQuestion?.options.map(opt => {
                 if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg={inputBg} />
-                const isSelected = tapped === opt
+                const isMulti = activeQuestion?.type === 'multi_choice'
+                const isSelected = isMulti ? multiSelected.includes(opt) : tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}
                     style={{
-                      display: 'flex', alignItems: 'center',
+                      display: 'flex', alignItems: 'center', gap: 10,
                       background: isSelected ? `${accent}08` : bg,
                       border: `1px solid ${isSelected ? accent : borderColor}`,
                       borderLeft: `4px solid ${isSelected ? accent : '#D0D0D0'}`,
@@ -264,10 +298,33 @@ export default function StormLayout({ formId, schema, theme, isTest = false, onC
                       }
                     }}
                   >
+                    {isMulti && (
+                      <span style={{
+                        flexShrink: 0, width: 14, height: 14, borderRadius: 3,
+                        border: `1.5px solid ${isSelected ? accent : borderColor}`,
+                        background: isSelected ? accent : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {isSelected && <span style={{ width: 6, height: 6, background: '#fff', borderRadius: 1, display: 'block' }} />}
+                      </span>
+                    )}
                     <span style={{ fontSize: 13, fontWeight: isSelected ? 700 : 400, color: isSelected ? accent : textColor, lineHeight: 1.4, transition: 'color .12s' }}>{opt}</span>
                   </motion.button>
                 )
               })}
+              {activeQuestion?.type === 'multi_choice' && multiSelected.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  onClick={() => confirmMulti(activeQuestion!)}
+                  style={{
+                    marginTop: 4, width: '100%', background: accent, border: 'none',
+                    borderRadius: 2, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+                    color: '#fff', cursor: 'pointer', letterSpacing: '.5px', textTransform: 'uppercase',
+                  }}
+                >
+                  確認選擇（已選 {multiSelected.length} 項）
+                </motion.button>
+              )}
             </div>
           </div>
         </motion.div>

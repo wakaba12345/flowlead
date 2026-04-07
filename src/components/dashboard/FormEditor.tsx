@@ -400,6 +400,13 @@ export default function FormEditor({ initialForm }: Props) {
                         value={q.question_text}
                         onChange={e => updateQuestion(i, { question_text: e.target.value })}
                       />
+                      <button
+                        onClick={() => updateQuestion(i, { type: q.type === 'single_choice' ? 'multi_choice' : 'single_choice' })}
+                        title={q.type === 'single_choice' ? '單選（點此切換成複選）' : '複選（點此切換成單選）'}
+                        className={`shrink-0 rounded px-2 py-0.5 text-[11px] font-semibold transition ${q.type === 'multi_choice' ? 'bg-violet-600/30 text-violet-300 hover:bg-violet-600/50' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
+                      >
+                        {q.type === 'multi_choice' ? '複選' : '單選'}
+                      </button>
                       <div className="flex shrink-0 items-center gap-0.5">
                         <button onClick={() => moveQuestion(i, -1)} disabled={i === 0}
                           className="rounded p-1 text-gray-600 hover:bg-gray-700 hover:text-gray-300 disabled:opacity-30">
@@ -426,7 +433,7 @@ export default function FormEditor({ initialForm }: Props) {
                             </>
                           ) : (
                             <>
-                              <span className="shrink-0 h-4 w-4 rounded-full border border-gray-600 bg-gray-900" />
+                              <span className={`shrink-0 h-4 w-4 border border-gray-600 bg-gray-900 ${q.type === 'multi_choice' ? 'rounded' : 'rounded-full'}`} />
                               <input
                                 className="flex-1 rounded border border-gray-600 bg-gray-900 px-2.5 py-1 text-xs text-gray-300 outline-none placeholder:text-gray-600 focus:border-violet-500"
                                 placeholder={`選項 ${oi + 1}`}

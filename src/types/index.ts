@@ -1,9 +1,12 @@
 export interface Question {
   id: string
-  type: 'single_choice'
+  type: 'single_choice' | 'multi_choice'
   question_text: string
   options: string[]
 }
+
+/** Multi-select answers are stored joined by this separator */
+export const MULTI_SEP = '|||'
 
 export interface LeadField {
   id: string

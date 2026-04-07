@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import type { FormSchema, Question, LeadField, LeadCapture } from '@/types'
+import { MULTI_SEP } from '@/types'
 
 export type WidgetState = 'idle' | 'answering' | 'lead_capture' | 'thank_you'
 
@@ -19,6 +20,7 @@ export function useFlowLeadState({ formId, schema, isTest = false, onComplete }:
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [leadData, setLeadData] = useState<Record<string, string>>({})
   const [tapped, setTapped] = useState<string | null>(null)
+  const [multiSelected, setMultiSelected] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [responseCount, setResponseCount] = useState<number | null>(null)
@@ -44,23 +46,39 @@ export function useFlowLeadState({ formId, schema, isTest = false, onComplete }:
       .catch(() => {})
   }, [formId])
 
+  function advance(newAnswers: Record<string, string>, isFirst = false) {
+    setAnswers(newAnswers)
+    setMultiSelected([])
+    if (isFirst) {
+      setCurrentIndex(1)
+      setWidgetState('answering')
+    } else if (currentIndex + 1 >= total) {
+      setWidgetState('lead_capture')
+    } else {
+      setCurrentIndex(i => i + 1)
+    }
+  }
+
   function pick(question: Question, option: string, isFirst = false) {
+    if (question.type === 'multi_choice') {
+      // Toggle selection — do not auto-advance
+      setMultiSelected(prev =>
+        prev.includes(option) ? prev.filter(o => o !== option) : [...prev, option]
+      )
+      return
+    }
+    // single_choice: tap feedback then advance
     setTapped(option)
     setTimeout(() => {
-      const newAnswers = isFirst
-        ? { q1: option }
-        : { ...answers, [question.id]: option }
-      setAnswers(newAnswers)
       setTapped(null)
-      if (isFirst) {
-        setCurrentIndex(1)
-        setWidgetState('answering')
-      } else if (currentIndex + 1 >= total) {
-        setWidgetState('lead_capture')
-      } else {
-        setCurrentIndex(i => i + 1)
-      }
+      advance(isFirst ? { q1: option } : { ...answers, [question.id]: option }, isFirst)
     }, 200)
+  }
+
+  function confirmMulti(question: Question) {
+    if (multiSelected.length === 0) return
+    const value = multiSelected.join(MULTI_SEP)
+    advance({ ...answers, [question.id]: value })
   }
 
   function validate() {
@@ -129,6 +147,8 @@ export function useFlowLeadState({ formId, schema, isTest = false, onComplete }:
     responseCount,
     progress,
     pick,
+    confirmMulti,
+    multiSelected,
     submit,
     setLeadData,
     setError,

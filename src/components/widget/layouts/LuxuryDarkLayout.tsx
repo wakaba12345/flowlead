@@ -39,11 +39,13 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
     fields,
     leadData,
     tapped,
+    multiSelected,
     submitting,
     errors,
     responseCount,
     progress,
     pick,
+    confirmMulti,
     submit,
     setLeadData,
     setError,
@@ -174,10 +176,14 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
               </p>
             </div>
             {/* Mobile options: 2-column grid with circle + text */}
+            {activeQuestion?.type === 'multi_choice' && (
+              <p style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 8, letterSpacing: '.3px' }}>可複選多個選項</p>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
               {activeQuestion?.options.map((opt, i) => {
                 if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg="#0d1824" />
-                const isSelected = tapped === opt
+                const isMulti = activeQuestion?.type === 'multi_choice'
+                const isSelected = isMulti ? multiSelected.includes(opt) : tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.95 }} onClick={() => handlePick(opt)}
                     style={{
@@ -187,20 +193,44 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
                       borderRadius: 10, padding: '8px 10px', cursor: 'pointer', textAlign: 'left',
                       transition: 'all .12s',
                     }}>
-                    <div style={{
-                      width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                      background: isSelected ? accent : 'transparent',
-                      border: `1.5px solid ${accent}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700, color: isSelected ? '#0F1B2D' : accent,
-                    }}>
-                      {LETTERS[i] || String(i + 1)}
-                    </div>
+                    {isMulti ? (
+                      <span style={{
+                        flexShrink: 0, width: 24, height: 24, borderRadius: 5,
+                        border: `1.5px solid ${isSelected ? accent : borderColor}`,
+                        background: isSelected ? accent : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {isSelected && <span style={{ width: 10, height: 10, background: '#0F1B2D', borderRadius: 2, display: 'block' }} />}
+                      </span>
+                    ) : (
+                      <div style={{
+                        width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                        background: isSelected ? accent : 'transparent',
+                        border: `1.5px solid ${accent}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, fontWeight: 700, color: isSelected ? '#0F1B2D' : accent,
+                      }}>
+                        {LETTERS[i] || String(i + 1)}
+                      </div>
+                    )}
                     <span style={{ fontSize: 12, fontWeight: 600, color: textColor, lineHeight: 1.3 }}>{opt}</span>
                   </motion.button>
                 )
               })}
             </div>
+            {activeQuestion?.type === 'multi_choice' && multiSelected.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                onClick={() => confirmMulti(activeQuestion!)}
+                style={{
+                  marginTop: 10, width: '100%', background: accent, border: 'none',
+                  borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+                  color: '#0F1B2D', cursor: 'pointer',
+                }}
+              >
+                確認選擇（已選 {multiSelected.length} 項）
+              </motion.button>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -236,24 +266,40 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
 
           {/* Center 47% — lettered circles */}
           <div style={{ width: '47%', padding: '0 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0 }}>
+            {activeQuestion?.type === 'multi_choice' && (
+              <p style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 8, letterSpacing: '.3px' }}>可複選多個選項</p>
+            )}
             {/* Options in 2-column grid of circles */}
             <div style={{ display: 'grid', gridTemplateColumns: (activeQuestion?.options.length ?? 0) <= 3 ? `repeat(${activeQuestion?.options.length ?? 2}, 1fr)` : 'repeat(4, 1fr)', gap: '8px 10px' }}>
               {activeQuestion?.options.map((opt, i) => {
                 if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} inputBg="#0d1824" />
-                const isSelected = tapped === opt
+                const isMulti = activeQuestion?.type === 'multi_choice'
+                const isSelected = isMulti ? multiSelected.includes(opt) : tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.95 }} onClick={() => handlePick(opt)}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                      background: isSelected ? accent : 'transparent',
-                      border: `1.5px solid ${accent}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 700, color: isSelected ? '#0F1B2D' : accent,
-                      transition: 'all .12s',
-                    }}>
-                      {LETTERS[i] || String(i + 1)}
-                    </div>
+                    {isMulti ? (
+                      <span style={{
+                        width: 32, height: 32, borderRadius: 7, flexShrink: 0,
+                        background: isSelected ? accent : 'transparent',
+                        border: `1.5px solid ${accent}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all .12s',
+                      }}>
+                        {isSelected && <span style={{ width: 14, height: 14, background: '#0F1B2D', borderRadius: 3, display: 'block' }} />}
+                      </span>
+                    ) : (
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                        background: isSelected ? accent : 'transparent',
+                        border: `1.5px solid ${accent}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 700, color: isSelected ? '#0F1B2D' : accent,
+                        transition: 'all .12s',
+                      }}>
+                        {LETTERS[i] || String(i + 1)}
+                      </div>
+                    )}
                     <span style={{ fontSize: 10, color: isSelected ? accent : mutedColor, lineHeight: 1.25, textAlign: 'center', maxWidth: 72, transition: 'color .12s' }}>
                       {opt}
                     </span>
@@ -261,6 +307,19 @@ export default function LuxuryDarkLayout({ formId, schema, theme, isTest = false
                 )
               })}
             </div>
+            {activeQuestion?.type === 'multi_choice' && multiSelected.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                onClick={() => confirmMulti(activeQuestion!)}
+                style={{
+                  marginTop: 10, width: '100%', background: accent, border: 'none',
+                  borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+                  color: '#0F1B2D', cursor: 'pointer',
+                }}
+              >
+                確認選擇（已選 {multiSelected.length} 項）
+              </motion.button>
+            )}
           </div>
 
           {/* Right 15% — decorative */}

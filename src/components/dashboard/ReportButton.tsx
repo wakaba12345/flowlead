@@ -193,11 +193,14 @@ export default function ReportButton({ responses, form, onShareReady }: Props) {
       for (const r of responses) {
         const ans = r.answers?.[q.id]
         if (!ans) continue
-        if (ans.startsWith('其他:')) {
-          counts['其他'] = (counts['其他'] || 0) + 1
-          otherAnswers.push(ans.slice(3))
-        } else {
-          counts[ans] = (counts[ans] || 0) + 1
+        const parts = ans.includes('|||') ? ans.split('|||') : [ans]
+        for (const part of parts) {
+          if (part.startsWith('其他:')) {
+            counts['其他'] = (counts['其他'] || 0) + 1
+            otherAnswers.push(part.slice(3))
+          } else {
+            counts[part] = (counts[part] || 0) + 1
+          }
         }
       }
       questionStats.push({ id: q.id, text: q.question_text, counts, otherAnswers })

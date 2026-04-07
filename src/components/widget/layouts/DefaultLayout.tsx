@@ -41,11 +41,13 @@ export default function DefaultLayout({ formId, schema, theme, isTest = false, o
     fields,
     leadData,
     tapped,
+    multiSelected,
     submitting,
     errors,
     responseCount,
     progress,
     pick,
+    confirmMulti,
     submit,
     setLeadData,
     setError,
@@ -166,12 +168,14 @@ export default function DefaultLayout({ formId, schema, theme, isTest = false, o
             <OptionsGrid
               question={activeQuestion!}
               tapped={tapped}
+              multiSelected={multiSelected}
               accent={accent}
               red={red}
               textColor={textColor}
               borderColor={borderColor}
               onPick={handlePick}
               onPickOther={handlePickOther}
+              onConfirmMulti={() => confirmMulti(current ?? questions[0])}
             />
           </motion.div>
         </AnimatePresence>
@@ -211,12 +215,14 @@ export default function DefaultLayout({ formId, schema, theme, isTest = false, o
             <OptionsGrid
               question={activeQuestion!}
               tapped={tapped}
+              multiSelected={multiSelected}
               accent={accent}
               red={red}
               textColor={textColor}
               borderColor={borderColor}
               onPick={handlePick}
               onPickOther={handlePickOther}
+              onConfirmMulti={() => confirmMulti(current ?? questions[0])}
               desktop
             />
           </div>
@@ -227,18 +233,21 @@ export default function DefaultLayout({ formId, schema, theme, isTest = false, o
 }
 
 /* ── Options Grid ── */
-function OptionsGrid({ question, tapped, accent, red, textColor, borderColor, onPick, onPickOther, desktop }: {
+function OptionsGrid({ question, tapped, multiSelected, accent, red, textColor, borderColor, onPick, onPickOther, onConfirmMulti, desktop }: {
   question: Question
   tapped: string | null
+  multiSelected: string[]
   accent: string
   red: string
   textColor: string
   borderColor: string
   onPick: (opt: string) => void
   onPickOther: (text: string) => void
+  onConfirmMulti: () => void
   desktop?: boolean
 }) {
   if (!question) return null
+  const isMulti = question.type === 'multi_choice'
   const count = question.options.length
   const avgLen = question.options.reduce((s, o) => s + o.length, 0) / count
   const cols = desktop
@@ -246,58 +255,89 @@ function OptionsGrid({ question, tapped, accent, red, textColor, borderColor, on
     : (avgLen <= 10 && count >= 3 ? Math.min(count, 3) : 1)
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 6, width: '100%' }}>
-      {question.options.map(opt => {
-        if (opt === '__other__') {
+    <div style={{ width: '100%' }}>
+      {isMulti && (
+        <p style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 8, letterSpacing: '.3px' }}>可複選多個選項</p>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 6 }}>
+        {question.options.map(opt => {
+          if (opt === '__other__') {
+            return (
+              <OtherOptionInput
+                key="__other__"
+                onConfirm={onPickOther}
+                accent={accent}
+                textColor={textColor}
+                borderColor={borderColor}
+                buttonStyle={{ background: '#f9fafb', border: `1.5px solid ${borderColor}`, borderRadius: 8, padding: desktop ? '10px 12px' : '8px 12px', fontSize: 12, fontWeight: 600, color: textColor, cursor: 'pointer', textAlign: 'left' as const, transition: 'all .12s', lineHeight: 1.35 }}
+              />
+            )
+          }
+          const isSelected = isMulti ? multiSelected.includes(opt) : tapped === opt
           return (
-            <OtherOptionInput
-              key="__other__"
-              onConfirm={onPickOther}
-              accent={accent}
-              textColor={textColor}
-              borderColor={borderColor}
-              buttonStyle={{ background: '#f9fafb', border: `1.5px solid ${borderColor}`, borderRadius: 8, padding: desktop ? '10px 12px' : '8px 12px', fontSize: 12, fontWeight: 600, color: textColor, cursor: 'pointer', textAlign: 'left' as const, transition: 'all .12s', lineHeight: 1.35 }}
-            />
+            <motion.button
+              key={opt}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onPick(opt)}
+              style={{
+                background: isSelected ? accent : '#f9fafb',
+                border: `1.5px solid ${isSelected ? accent : borderColor}`,
+                borderRadius: 8,
+                padding: desktop ? '10px 12px' : (cols > 1 ? '8px 6px' : '8px 12px'),
+                fontSize: 12,
+                fontWeight: 600,
+                color: isSelected ? '#fff' : textColor,
+                cursor: 'pointer',
+                textAlign: 'left' as const,
+                transition: 'all .12s',
+                lineHeight: 1.35,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 7,
+              }}
+              onMouseEnter={e => {
+                if (!isSelected) {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.borderColor = red
+                  el.style.background = `${red}08`
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isSelected) {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.borderColor = borderColor
+                  el.style.background = '#f9fafb'
+                }
+              }}
+            >
+              {isMulti && (
+                <span style={{
+                  flexShrink: 0, width: 14, height: 14, borderRadius: 3,
+                  border: `1.5px solid ${isSelected ? '#fff' : borderColor}`,
+                  background: isSelected ? 'rgba(255,255,255,0.25)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {isSelected && <span style={{ width: 7, height: 7, background: '#fff', borderRadius: 1, display: 'block' }} />}
+                </span>
+              )}
+              {opt}
+            </motion.button>
           )
-        }
-        const isSelected = tapped === opt
-        return (
-          <motion.button
-            key={opt}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => onPick(opt)}
-            style={{
-              background: isSelected ? accent : '#f9fafb',
-              border: `1.5px solid ${isSelected ? accent : borderColor}`,
-              borderRadius: 8,
-              padding: desktop ? '10px 12px' : (cols > 1 ? '8px 6px' : '8px 12px'),
-              fontSize: 12,
-              fontWeight: 600,
-              color: isSelected ? '#fff' : textColor,
-              cursor: 'pointer',
-              textAlign: cols > 1 ? 'center' : 'left',
-              transition: 'all .12s',
-              lineHeight: 1.35,
-            }}
-            onMouseEnter={e => {
-              if (!isSelected) {
-                const el = e.currentTarget as HTMLElement
-                el.style.borderColor = red
-                el.style.background = `${red}08`
-              }
-            }}
-            onMouseLeave={e => {
-              if (!isSelected) {
-                const el = e.currentTarget as HTMLElement
-                el.style.borderColor = borderColor
-                el.style.background = '#f9fafb'
-              }
-            }}
-          >
-            {opt}
-          </motion.button>
-        )
-      })}
+        })}
+      </div>
+      {isMulti && multiSelected.length > 0 && (
+        <motion.button
+          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+          onClick={onConfirmMulti}
+          style={{
+            marginTop: 10, width: '100%', background: accent, border: 'none',
+            borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+            color: '#fff', cursor: 'pointer', transition: 'opacity .12s',
+          }}
+        >
+          確認選擇（已選 {multiSelected.length} 項）
+        </motion.button>
+      )}
     </div>
   )
 }

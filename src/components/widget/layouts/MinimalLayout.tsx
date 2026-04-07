@@ -37,11 +37,13 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
     fields,
     leadData,
     tapped,
+    multiSelected,
     submitting,
     errors,
     responseCount,
     progress,
     pick,
+    confirmMulti,
     submit,
     setLeadData,
     setError,
@@ -161,10 +163,14 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
             <p style={{ fontSize: 15, fontWeight: 700, color: textColor, margin: '0 0 12px', lineHeight: 1.35, fontFamily: 'Georgia, serif' }}>
               {activeQuestion?.question_text}
             </p>
+            {activeQuestion?.type === 'multi_choice' && (
+              <p style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 8, letterSpacing: '.3px' }}>可複選多個選項</p>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {activeQuestion?.options.map(opt => {
                 if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} />
-                const isSelected = tapped === opt
+                const isMulti = activeQuestion?.type === 'multi_choice'
+                const isSelected = isMulti ? multiSelected.includes(opt) : tapped === opt
                 return (
                   <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}
                     style={{
@@ -174,19 +180,43 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
                       borderRadius: 7, padding: '8px 10px', cursor: 'pointer', textAlign: 'left',
                       transition: 'all .12s',
                     }}>
-                    <div style={{
-                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                      background: isSelected ? accent : 'transparent',
-                      border: `1.5px solid ${isSelected ? accent : '#D1D5DB'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {isSelected && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
-                    </div>
+                    {isMulti ? (
+                      <span style={{
+                        flexShrink: 0, width: 14, height: 14, borderRadius: 3,
+                        border: `1.5px solid ${isSelected ? accent : '#D1D5DB'}`,
+                        background: isSelected ? accent : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {isSelected && <span style={{ width: 7, height: 7, background: '#fff', borderRadius: 1, display: 'block' }} />}
+                      </span>
+                    ) : (
+                      <div style={{
+                        width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                        background: isSelected ? accent : 'transparent',
+                        border: `1.5px solid ${isSelected ? accent : '#D1D5DB'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {isSelected && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
+                      </div>
+                    )}
                     <span style={{ fontSize: 12, color: isSelected ? textColor : '#374151', lineHeight: 1.3, fontWeight: isSelected ? 600 : 400 }}>{opt}</span>
                   </motion.button>
                 )
               })}
             </div>
+            {activeQuestion?.type === 'multi_choice' && multiSelected.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                onClick={() => confirmMulti(activeQuestion!)}
+                style={{
+                  marginTop: 10, width: '100%', background: accent, border: 'none',
+                  borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+                  color: '#fff', cursor: 'pointer',
+                }}
+              >
+                確認選擇（已選 {multiSelected.length} 項）
+              </motion.button>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -222,9 +252,13 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
 
           {/* Right 55% — clean list options */}
           <div style={{ width: '55%', padding: '16px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
+            {activeQuestion?.type === 'multi_choice' && (
+              <p style={{ fontSize: 11, color: accent, fontWeight: 600, margin: '0 0 4px', letterSpacing: '.3px' }}>可複選多個選項</p>
+            )}
             {activeQuestion?.options.map(opt => {
               if (opt === '__other__') return <OtherOptionInput key="__other__" onConfirm={handlePickOther} accent={accent} textColor={textColor} borderColor={borderColor} />
-              const isSelected = tapped === opt
+              const isMulti = activeQuestion?.type === 'multi_choice'
+              const isSelected = isMulti ? multiSelected.includes(opt) : tapped === opt
               return (
                 <motion.button key={opt} whileTap={{ scale: 0.98 }} onClick={() => handlePick(opt)}
                   style={{
@@ -247,19 +281,44 @@ export default function MinimalLayout({ formId, schema, theme, isTest = false, o
                     }
                   }}
                 >
-                  <div style={{
-                    width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                    background: isSelected ? accent : 'transparent',
-                    border: `1.5px solid ${isSelected ? accent : '#D1D5DB'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all .12s',
-                  }}>
-                    {isSelected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-                  </div>
+                  {isMulti ? (
+                    <span style={{
+                      flexShrink: 0, width: 18, height: 18, borderRadius: 4,
+                      border: `1.5px solid ${isSelected ? accent : '#D1D5DB'}`,
+                      background: isSelected ? accent : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all .12s',
+                    }}>
+                      {isSelected && <span style={{ width: 8, height: 8, background: '#fff', borderRadius: 1, display: 'block' }} />}
+                    </span>
+                  ) : (
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                      background: isSelected ? accent : 'transparent',
+                      border: `1.5px solid ${isSelected ? accent : '#D1D5DB'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all .12s',
+                    }}>
+                      {isSelected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    </div>
+                  )}
                   <span style={{ fontSize: 13, color: isSelected ? textColor : '#374151', lineHeight: 1.4, fontWeight: isSelected ? 600 : 400, transition: 'all .12s' }}>{opt}</span>
                 </motion.button>
               )
             })}
+            {activeQuestion?.type === 'multi_choice' && multiSelected.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                onClick={() => confirmMulti(activeQuestion!)}
+                style={{
+                  marginTop: 6, width: '100%', background: accent, border: 'none',
+                  borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700,
+                  color: '#fff', cursor: 'pointer',
+                }}
+              >
+                確認選擇（已選 {multiSelected.length} 項）
+              </motion.button>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>
