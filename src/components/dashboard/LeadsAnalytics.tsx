@@ -214,34 +214,36 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
           </div>
           <ReportButton responses={filtered} form={form} onShareReady={url => { setLatestShareUrl(url); setReportGenCount(c => c + 1) }} />
         </div>
-        {latestShareUrl && (
-          <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-3">
-            <LinkIcon size={13} className="shrink-0 text-violet-400" />
-            <span className="text-xs text-violet-400 font-medium">報告已儲存，可分享：</span>
-            <button
-              onClick={copyShareUrl}
-              className="flex items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
-            >
-              {shareCopied ? <Check size={12} /> : <Copy size={12} />}
-              {shareCopied ? '已複製' : '複製連結'}
-            </button>
-            <a
-              href={latestShareUrl}
-              target="_blank"
-              rel="noopener"
-              className="flex items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
-            >
-              <ExternalLink size={12} />
-              開啟報告
-            </a>
-          </div>
-        )}
       </div>
 
       {/* Report history */}
-      <div className="mb-6">
+      <div className="mb-3">
         <ReportHistory formId={form.id} refreshTrigger={reportGenCount} />
       </div>
+
+      {/* Share buttons — shown after report is generated */}
+      {latestShareUrl && (
+        <div className="mb-6 flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-950/30 px-4 py-3">
+          <LinkIcon size={13} className="shrink-0 text-violet-400" />
+          <span className="text-xs text-violet-400 font-medium">最新報告分享：</span>
+          <button
+            onClick={copyShareUrl}
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+          >
+            {shareCopied ? <Check size={12} /> : <Copy size={12} />}
+            {shareCopied ? '已複製' : '複製連結'}
+          </button>
+          <a
+            href={latestShareUrl}
+            target="_blank"
+            rel="noopener"
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+          >
+            <ExternalLink size={12} />
+            開啟報告
+          </a>
+        </div>
+      )}
 
       {/* Charts */}
       {(leadStats.length > 0 || qStats.some(q => q.total > 0)) && (
