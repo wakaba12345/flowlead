@@ -7,7 +7,6 @@ import { Download, FlaskConical, X, ChevronRight, Link as LinkIcon, Copy, Check,
 import type { Response, Form } from '@/types'
 import ReportButton from '@/components/dashboard/ReportButton'
 import ReportHistory from '@/components/dashboard/ReportHistory'
-import ImportResponses from '@/components/dashboard/ImportResponses'
 
 const COLORS = ['#7c3aed','#06b6d4','#f59e0b','#10b981','#ef4444','#8b5cf6','#3b82f6','#f97316','#ec4899','#14b8a6']
 const SKIP_KEYS = new Set(['Email','電話','地址','email','phone','address','姓名','name'])
@@ -191,7 +190,6 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
             className="flex h-8 items-center gap-1.5 rounded-lg border border-gray-700 px-3 text-xs text-gray-300 transition hover:bg-gray-800 disabled:opacity-40">
             <Download size={13} />匯出 CSV{filters.length > 0 && '（篩選後）'}
           </button>
-          <ImportResponses form={form} onImported={() => window.location.reload()} />
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import Link from 'next/link'
 import type { Form } from '@/types'
 import { ChevronRight, Users, CalendarDays, Clock } from 'lucide-react'
+import ImportDataset from '@/components/dashboard/ImportDataset'
 
 export default async function LeadsPage() {
   const formsRes = await supabaseAdmin
@@ -35,13 +36,14 @@ export default async function LeadsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">名單管理</h1>
           <p className="mt-1 text-sm text-gray-400">
             {forms.length} 個表單 · 共 {totalLeads} 筆名單
           </p>
         </div>
+        <ImportDataset />
       </div>
 
       {forms.length === 0 ? (
