@@ -11,9 +11,10 @@ interface ReportRecord {
 
 interface Props {
   formId: string
+  refreshTrigger?: number
 }
 
-export default function ReportHistory({ formId }: Props) {
+export default function ReportHistory({ formId, refreshTrigger }: Props) {
   const [reports, setReports] = useState<ReportRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
@@ -42,6 +43,13 @@ export default function ReportHistory({ formId }: Props) {
   useEffect(() => {
     if (open) load()
   }, [open, load])
+
+  // Auto-open and refresh when a new report is generated
+  useEffect(() => {
+    if (!refreshTrigger) return
+    setOpen(true)
+    load()
+  }, [refreshTrigger, load])
 
   async function deleteReport(id: string) {
     if (!confirm('確定要刪除這份報告嗎？')) return

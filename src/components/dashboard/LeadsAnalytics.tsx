@@ -48,6 +48,7 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
   const [otherExpanded, setOtherExpanded] = useState<Record<string, boolean>>({})
   const [latestShareUrl, setLatestShareUrl] = useState<string | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
+  const [reportGenCount, setReportGenCount] = useState(0)
 
   function copyShareUrl() {
     if (!latestShareUrl) return
@@ -211,7 +212,7 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
               自動分析{filters.length > 0 ? '篩選後的' : '全部'} <span className="text-violet-300 font-medium">{filtered.length}</span> 筆名單，找出性別／年齡／收入的偏好差異與離群值
             </p>
           </div>
-          <ReportButton responses={filtered} form={form} onShareReady={url => { setLatestShareUrl(url) }} />
+          <ReportButton responses={filtered} form={form} onShareReady={url => { setLatestShareUrl(url); setReportGenCount(c => c + 1) }} />
         </div>
         {latestShareUrl && (
           <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-3">
@@ -239,7 +240,7 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
 
       {/* Report history */}
       <div className="mb-6">
-        <ReportHistory formId={form.id} />
+        <ReportHistory formId={form.id} refreshTrigger={reportGenCount} />
       </div>
 
       {/* Charts */}
