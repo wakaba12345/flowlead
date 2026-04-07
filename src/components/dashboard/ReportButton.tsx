@@ -234,14 +234,17 @@ export default function ReportButton({ responses, form, onShareReady }: Props) {
     const jsUrl = JSON.stringify(shareUrl)
 
     const bar = `
-<div id="rpt-share-bar" style="position:sticky;top:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:7px 16px;display:flex;align-items:center;gap:8px;font-family:system-ui,-apple-system,sans-serif">
+<div id="rpt-share-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:7px 16px;display:flex;align-items:center;gap:8px;font-family:system-ui,-apple-system,sans-serif">
   <button id="rpt-copy-btn"
     style="background:#334155;border:none;color:#e2e8f0;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer;white-space:nowrap"
   >複製連結</button>
   <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
     style="background:#4f46e5;color:white;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;text-decoration:none;white-space:nowrap"
   >開啟分享頁</a>
-  <style>@media print{#rpt-share-bar{display:none!important}}</style>
+  <style>
+    body { padding-top: 44px !important; }
+    @media print { #rpt-share-bar { display:none!important } body { padding-top:0!important } }
+  </style>
   <script>
     (function(){
       var url=${jsUrl};
