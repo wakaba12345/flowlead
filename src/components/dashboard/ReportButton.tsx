@@ -230,20 +230,16 @@ export default function ReportButton({ responses, form, onShareReady }: Props) {
   }
 
   function injectShareBar(html: string, shareUrl: string): string {
-    // Escape for safe use in HTML attribute and JS string (URL is always our own origin + UUID,
-    // but encode defensively to prevent any attribute/script injection)
     const safeUrl = shareUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;')
-    const jsUrl = JSON.stringify(shareUrl) // safely quoted for use inside <script>
+    const jsUrl = JSON.stringify(shareUrl)
 
     const bar = `
-<div id="rpt-share-bar" style="position:sticky;top:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:system-ui,-apple-system,sans-serif">
-  <span style="font-size:11px;font-weight:600;color:#94a3b8;white-space:nowrap;letter-spacing:.5px">分享連結</span>
-  <span style="flex:1;min-width:120px;font-size:12px;color:#818cf8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${safeUrl}</span>
+<div id="rpt-share-bar" style="position:sticky;top:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:7px 16px;display:flex;align-items:center;gap:8px;font-family:system-ui,-apple-system,sans-serif">
   <button id="rpt-copy-btn"
-    style="flex-shrink:0;background:#334155;border:none;color:#e2e8f0;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer"
+    style="background:#334155;border:none;color:#e2e8f0;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer;white-space:nowrap"
   >複製連結</button>
   <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
-    style="flex-shrink:0;background:#4f46e5;color:white;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;text-decoration:none"
+    style="background:#4f46e5;color:white;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;text-decoration:none;white-space:nowrap"
   >開啟分享頁</a>
   <style>@media print{#rpt-share-bar{display:none!important}}</style>
   <script>

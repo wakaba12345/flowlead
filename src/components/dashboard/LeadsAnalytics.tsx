@@ -203,39 +203,39 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
       )}
 
       {/* AI Report CTA */}
-      <div className="mb-3 flex items-center justify-between rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-950/60 to-indigo-950/60 px-5 py-4">
-        <div>
-          <p className="font-semibold text-gray-100">AI 數據分析報告</p>
-          <p className="mt-0.5 text-xs text-gray-400">
-            自動分析{filters.length > 0 ? '篩選後的' : '全部'} <span className="text-violet-300 font-medium">{filtered.length}</span> 筆名單，找出性別／年齡／收入的偏好差異與離群值
-          </p>
+      <div className="mb-3 rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-950/60 to-indigo-950/60 px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-gray-100">AI 數據分析報告</p>
+            <p className="mt-0.5 text-xs text-gray-400">
+              自動分析{filters.length > 0 ? '篩選後的' : '全部'} <span className="text-violet-300 font-medium">{filtered.length}</span> 筆名單，找出性別／年齡／收入的偏好差異與離群值
+            </p>
+          </div>
+          <ReportButton responses={filtered} form={form} onShareReady={url => { setLatestShareUrl(url) }} />
         </div>
-        <ReportButton responses={filtered} form={form} onShareReady={url => { setLatestShareUrl(url) }} />
+        {latestShareUrl && (
+          <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-3">
+            <LinkIcon size={13} className="shrink-0 text-violet-400" />
+            <span className="text-xs text-violet-400 font-medium">報告已儲存，可分享：</span>
+            <button
+              onClick={copyShareUrl}
+              className="flex items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+            >
+              {shareCopied ? <Check size={12} /> : <Copy size={12} />}
+              {shareCopied ? '已複製' : '複製連結'}
+            </button>
+            <a
+              href={latestShareUrl}
+              target="_blank"
+              rel="noopener"
+              className="flex items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
+            >
+              <ExternalLink size={12} />
+              開啟報告
+            </a>
+          </div>
+        )}
       </div>
-
-      {/* Share URL bar — shown after report is generated */}
-      {latestShareUrl && (
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-950/40 px-4 py-3">
-          <LinkIcon size={14} className="shrink-0 text-violet-400" />
-          <span className="min-w-0 flex-1 truncate text-xs text-violet-300">{latestShareUrl}</span>
-          <button
-            onClick={copyShareUrl}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
-          >
-            {shareCopied ? <Check size={12} /> : <Copy size={12} />}
-            {shareCopied ? '已複製' : '複製連結'}
-          </button>
-          <a
-            href={latestShareUrl}
-            target="_blank"
-            rel="noopener"
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-violet-600/30 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/50 transition"
-          >
-            <ExternalLink size={12} />
-            開啟
-          </a>
-        </div>
-      )}
 
       {/* Report history */}
       <div className="mb-6">

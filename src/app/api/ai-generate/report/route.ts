@@ -67,6 +67,14 @@ export async function POST(req: NextRequest) {
     /* Keep all backgrounds on screen */
     * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important }
 
+    /* Screen: ensure footer text has good contrast on dark backgrounds */
+    footer, [class*="footer"], [id*="footer"] {
+      color: #cbd5e1 !important;
+    }
+    footer *, [class*="footer"] *, [id*="footer"] * {
+      color: #cbd5e1 !important;
+    }
+
     @media print {
       /* Remove the charts-section outer background — show white/transparent instead */
       #rpt-charts { background: transparent !important; padding-top: 16px !important; padding-bottom: 16px !important; }
@@ -80,6 +88,12 @@ export async function POST(req: NextRequest) {
 
       /* Restore white text on colored badge pills so they stay readable */
       .rpt-badge { color: white !important; }
+
+      /* Footer: visible on white paper */
+      footer, [class*="footer"], [id*="footer"],
+      footer *, [class*="footer"] *, [id*="footer"] * {
+        color: #374151 !important;
+      }
     }
   </style>`
   html = html.replace(/<\/head>/i, printStyle + '</head>')
