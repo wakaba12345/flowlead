@@ -233,32 +233,29 @@ export default function ReportButton({ responses, form, onShareReady }: Props) {
     const safeUrl = shareUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;')
     const jsUrl = JSON.stringify(shareUrl)
 
-    const bar = `
-<div id="rpt-share-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:7px 16px;display:flex;align-items:center;gap:8px;font-family:system-ui,-apple-system,sans-serif">
-  <button id="rpt-copy-btn"
-    style="background:#334155;border:none;color:#e2e8f0;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer;white-space:nowrap"
-  >複製連結</button>
-  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
-    style="background:#4f46e5;color:white;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;text-decoration:none;white-space:nowrap"
-  >開啟分享頁</a>
-  <style>
-    body { padding-top: 44px !important; }
-    @media print { #rpt-share-bar { display:none!important } body { padding-top:0!important } }
-  </style>
-  <script>
-    (function(){
-      var url=${jsUrl};
-      document.getElementById('rpt-copy-btn').addEventListener('click',function(){
-        var btn=this;
-        navigator.clipboard.writeText(url).then(function(){
-          btn.textContent='已複製 ✓';btn.style.color='#34d399';
-          setTimeout(function(){btn.textContent='複製連結';btn.style.color='';},2000);
-        });
-      });
-    })();
-  </script>
+    // 1. Inject bar style into <head> so it's always applied
+    const barStyle = `<style id="rpt-share-style">
+  body { padding-top:44px !important; }
+  @media print { #rpt-share-bar { display:none !important; } body { padding-top:0 !important; } }
+</style>`
+    html = html.replace(/<\/head>/i, barStyle + '</head>')
+
+    // 2. Inject fixed bar right after <body>
+    const bar = `<div id="rpt-share-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e293b;border-bottom:1px solid #334155;padding:7px 16px;display:flex;align-items:center;gap:8px;font-family:system-ui,-apple-system,sans-serif">
+  <button id="rpt-copy-btn" style="background:#334155;border:none;color:#e2e8f0;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer;white-space:nowrap">複製連結</button>
+  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="background:#4f46e5;color:white;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;text-decoration:none;white-space:nowrap">開啟分享頁</a>
+  <script>(function(){var u=${jsUrl};document.getElementById('rpt-copy-btn').addEventListener('click',function(){var b=this;navigator.clipboard.writeText(u).then(function(){b.textContent='已複製 ✓';b.style.color='#34d399';setTimeout(function(){b.textContent='複製連結';b.style.color='';},2000);});});})();<\/script>
 </div>`
-    return html.replace(/<body([^>]*)>/i, `<body$1>${bar}`)
+    html = html.replace(/<body([^>]*)>/i, `<body$1>${bar}`)
+
+    // 3. Inject footer before </body>
+    const footer = `<footer id="rpt-footer" style="font-family:system-ui,-apple-system,sans-serif;margin-top:48px;padding:24px 32px;border-top:1px solid #334155;background:#1e293b;text-align:center">
+  <p style="font-size:13px;color:#94a3b8;margin:0 0 6px">此報告由 <strong style="color:#a5b4fc">FlowLead</strong> AI 自動生成</p>
+  <p style="font-size:12px;color:#64748b;margin:0">本表單可依需求編輯文字、選項與版型，如需調整請聯繫您的業務顧問</p>
+</footer>`
+    html = html.replace(/<\/body>/i, footer + '</body>')
+
+    return html
   }
 
   async function generate() {
