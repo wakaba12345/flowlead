@@ -6,10 +6,12 @@ import { Upload, X, ChevronRight, Loader2, AlertCircle, FileSpreadsheet } from '
 
 // Known lead field keywords → auto-classify
 const LEAD_FIELD_MAP: Record<string, { id: string; label: string }> = {
-  '姓名': { id: 'name', label: '姓名' }, 'name': { id: 'name', label: '姓名' },
+  '姓名': { id: 'name', label: '姓名' }, 'name': { id: 'name', label: '姓名' }, '名字': { id: 'name', label: '姓名' },
   'email': { id: 'email', label: 'Email' }, 'e-mail': { id: 'email', label: 'Email' },
   'Email': { id: 'email', label: 'Email' }, 'EMAIL': { id: 'email', label: 'Email' },
-  '電話': { id: 'phone', label: '電話' }, 'phone': { id: 'phone', label: '電話' }, '手機': { id: 'phone', label: '電話' },
+  '電子郵件': { id: 'email', label: 'Email' }, '電郵': { id: 'email', label: 'Email' },
+  '電話': { id: 'phone', label: '電話' }, 'phone': { id: 'phone', label: '電話' },
+  '手機': { id: 'phone', label: '電話' }, '手機號碼': { id: 'phone', label: '電話' }, '聯絡電話': { id: 'phone', label: '電話' },
   '年齡': { id: 'age', label: '年齡' }, 'age': { id: 'age', label: '年齡' },
   '性別': { id: 'gender', label: '性別' }, 'gender': { id: 'gender', label: '性別' },
   '年收入': { id: 'income', label: '年收入' }, 'income': { id: 'income', label: '年收入' },
@@ -17,6 +19,20 @@ const LEAD_FIELD_MAP: Record<string, { id: string; label: string }> = {
   '婚姻狀況': { id: 'marital', label: '婚姻狀況' }, '有無子女': { id: 'has_children', label: '有無子女' },
   '時間戳記': { id: '_ts', label: '時間戳記' }, 'Timestamp': { id: '_ts', label: '時間戳記' },
   '時間戳記\n': { id: '_ts', label: '時間戳記' }, '填寫時間': { id: '_ts', label: '填寫時間' },
+}
+
+// Find lead field by keyword matching (case-insensitive, partial match)
+function findLeadField(header: string): { id: string; label: string } | null {
+  const h = header.trim()
+  if (LEAD_FIELD_MAP[h]) return LEAD_FIELD_MAP[h]
+  const lower = h.toLowerCase()
+  if (lower.includes('email') || lower.includes('e-mail') || h.includes('電子郵件') || h.includes('電郵'))
+    return { id: 'email', label: 'Email' }
+  if (lower.includes('phone') || h.includes('電話') || h.includes('手機'))
+    return { id: 'phone', label: '電話' }
+  if (lower.includes('name') || h.includes('姓名') || h.includes('名字'))
+    return { id: 'name', label: '姓名' }
+  return null
 }
 
 type ColType = 'lead' | 'question' | 'multi_question' | 'open_question' | 'skip'
@@ -69,7 +85,7 @@ export default function ImportDataset() {
 
   function autoClassify(headers: string[]): ColConfig[] {
     return headers.map(h => {
-      const lf = LEAD_FIELD_MAP[h] || LEAD_FIELD_MAP[h.trim()]
+      const lf = findLeadField(h)
       if (lf && lf.id !== '_ts') return { header: h, type: 'lead', leadId: lf.id, leadLabel: lf.label }
       if (lf?.id === '_ts') return { header: h, type: 'skip' }
       return { header: h, type: 'question' }
@@ -107,7 +123,17 @@ export default function ImportDataset() {
   }
 
   function updateCol(idx: number, patch: Partial<ColConfig>) {
-    setCols(prev => prev.map((c, i) => i === idx ? { ...c, ...patch } : c))
+    setCols(prev => prev.map((c, i) => {
+      if (i !== idx) return c
+      const updated = { ...c, ...patch }
+      // When switching to 'lead' type manually and leadId not set, auto-detect or use header as fallback
+      if (updated.type === 'lead' && !updated.leadId) {
+        const lf = findLeadField(updated.header)
+        updated.leadId = lf ? lf.id : updated.header.trim()
+        updated.leadLabel = lf ? lf.label : updated.header.trim()
+      }
+      return updated
+    }))
   }
 
   async function doImport() {
@@ -118,8 +144,8 @@ export default function ImportDataset() {
       isMulti: c.type === 'multi_question',
       isOpen: c.type === 'open_question',
     }))
-    const leadCols = cols.filter(c => c.type === 'lead').map(c => ({
-      csvHeader: c.header, fieldId: c.leadId!, fieldLabel: c.leadLabel!,
+    const leadCols = cols.filter(c => c.type === 'lead' && c.leadId).map(c => ({
+      csvHeader: c.header, fieldId: c.leadId!, fieldLabel: c.leadLabel || c.header,
     }))
     if (questionCols.length === 0 && leadCols.length === 0) { setError('請至少設定一個統計欄位或個人資料欄位'); return }
 
