@@ -112,27 +112,57 @@ export default function ImportDataset() {
 
   async function doImport() {
     if (!title.trim()) { setError('請輸入資料集名稱'); return }
-    const questionCols = cols.filter(c => c.type === 'question').map(c => ({ csvHeader: c.header, questionText: c.header }))
-    const leadCols = cols.filter(c => c.type === 'lead').map(c => ({ csvHeader: c.header, fieldId: c.leadId!, fieldLabel: c.leadLabel! }))
-    if (questionCols.length === 0 && leadCols.length === 0) { setError('請至少設定一個問題或名單欄位'); return }
+    const questionCols = cols.filter(c => c.type === 'question').map((c, i) => ({
+      csvHeader: c.header, questionText: c.header, questionId: `q${i + 1}`,
+    }))
+    const leadCols = cols.filter(c => c.type === 'lead').map(c => ({
+      csvHeader: c.header, fieldId: c.leadId!, fieldLabel: c.leadLabel!,
+    }))
+    if (questionCols.length === 0 && leadCols.length === 0) { setError('請至少設定一個統計欄位或個人資料欄位'); return }
 
     setImporting(true)
     setError('')
     try {
-      const res = await fetch('/api/import-dataset', {
+      // Step 1: create form (send only sample rows for options detection)
+      const step1Res = await fetch('/api/import-dataset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), leadColumns: leadCols, questionColumns: questionCols, rows }),
+        body: JSON.stringify({
+          title: title.trim(),
+          leadColumns: leadCols,
+          questionColumns: questionCols,
+          sampleRows: rows.slice(0, 200),
+        }),
       })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || '匯入失敗'); return }
+      const step1 = await step1Res.json().catch(() => ({ error: '伺服器回應異常' }))
+      if (!step1Res.ok) { setError(step1.error || '建立資料集失敗'); return }
+
+      const { form_id, tenant_id } = step1
+
+      // Step 2: send rows in batches of 200
+      const BATCH = 200
+      for (let i = 0; i < rows.length; i += BATCH) {
+        const batchRes = await fetch('/api/import-dataset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            form_id, tenant_id,
+            leadColumns: leadCols,
+            questionColumns: questionCols,
+            rows: rows.slice(i, i + BATCH),
+          }),
+        })
+        const batchData = await batchRes.json().catch(() => ({ error: '批次匯入失敗' }))
+        if (!batchRes.ok) { setError(batchData.error || '匯入資料時發生錯誤'); return }
+      }
+
       setStep('done')
       setTimeout(() => {
         setOpen(false)
-        router.push(`/dashboard/leads/${data.form_id}`)
+        router.push(`/dashboard/leads/${form_id}`)
       }, 1200)
-    } catch {
-      setError('網路錯誤，請稍後再試')
+    } catch (e) {
+      setError(`匯入失敗：${e}`)
     } finally {
       setImporting(false)
     }
@@ -210,11 +240,11 @@ export default function ImportDataset() {
                       <p className="text-xs font-semibold text-gray-400">欄位設定</p>
                       <p className="text-xs text-gray-600">{rows.length} 筆資料 · {headers.length} 欄</p>
                     </div>
-                    <p className="mb-3 text-xs text-gray-600">
-                      <span className="text-violet-400">問題</span> = 作答統計 ·
-                      <span className="text-cyan-400 ml-1">名單</span> = 受訪者資訊 ·
-                      <span className="text-gray-500 ml-1">略過</span> = 不匯入
-                    </p>
+                    <div className="mb-3 space-y-1 rounded-lg border border-gray-700 bg-gray-800/60 px-3 py-2 text-xs">
+                      <p><span className="font-semibold text-violet-300">統計欄位</span> — 問卷題目，系統會計算每個選項的人數，用於圖表和 AI 報告</p>
+                      <p><span className="font-semibold text-cyan-300">個人資料</span> — 姓名、Email、電話等受訪者基本資料，會顯示在名單列表</p>
+                      <p><span className="font-semibold text-gray-400">略過</span> — 不匯入（時間戳記等不需要的欄位）</p>
+                    </div>
                     <div className="space-y-1.5 rounded-xl border border-gray-800 bg-gray-800/40 p-3">
                       {cols.map((col, idx) => (
                         <div key={col.header} className="flex items-center gap-3">
@@ -227,7 +257,7 @@ export default function ImportDataset() {
                                     : t === 'lead' ? 'bg-cyan-600 text-white'
                                     : 'bg-gray-600 text-white'
                                   : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
-                                {t === 'question' ? '問題' : t === 'lead' ? '名單' : '略過'}
+                                {t === 'question' ? '統計欄位' : t === 'lead' ? '個人資料' : '略過'}
                               </button>
                             ))}
                           </div>
@@ -235,8 +265,8 @@ export default function ImportDataset() {
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-gray-600">
-                      問題 <span className="text-violet-300 font-medium">{questionCount}</span> 欄 ·
-                      名單 <span className="text-cyan-300 font-medium ml-1">{leadCount}</span> 欄
+                      統計欄位 <span className="text-violet-300 font-medium">{questionCount}</span> 欄 ·
+                      個人資料 <span className="text-cyan-300 font-medium ml-1">{leadCount}</span> 欄
                     </p>
                   </div>
 
