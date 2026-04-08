@@ -16,6 +16,7 @@ const LEAD_FIELD_MAP: Record<string, { id: string; label: string }> = {
   '地址': { id: 'address', label: '地址' }, 'address': { id: 'address', label: '地址' },
   '婚姻狀況': { id: 'marital', label: '婚姻狀況' }, '有無子女': { id: 'has_children', label: '有無子女' },
   '時間戳記': { id: '_ts', label: '時間戳記' }, 'Timestamp': { id: '_ts', label: '時間戳記' },
+  '時間戳記\n': { id: '_ts', label: '時間戳記' }, '填寫時間': { id: '_ts', label: '填寫時間' },
 }
 
 type ColType = 'lead' | 'question' | 'skip'
@@ -75,11 +76,25 @@ export default function ImportDataset() {
     })
   }
 
+  function decodeBuffer(buf: ArrayBuffer): string {
+    // Try UTF-8 first (strict); fall back to Big5 for Traditional Chinese files
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(buf)
+    } catch {
+      try {
+        return new TextDecoder('big5').decode(buf)
+      } catch {
+        return new TextDecoder('utf-8', { fatal: false }).decode(buf)
+      }
+    }
+  }
+
   function handleFile(file: File) {
     setError('')
     const reader = new FileReader()
     reader.onload = e => {
-      const text = e.target?.result as string
+      const buf = e.target?.result as ArrayBuffer
+      const text = decodeBuffer(buf).replace(/^\uFEFF/, '') // strip BOM
       const { headers, rows } = parseCSV(text)
       if (!headers.length || rows.length === 0) { setError('無法解析 CSV，請確認格式正確且包含資料'); return }
       setHeaders(headers)
@@ -88,7 +103,7 @@ export default function ImportDataset() {
       setTitle('')
       setStep('map')
     }
-    reader.readAsText(file, 'UTF-8')
+    reader.readAsArrayBuffer(file)
   }
 
   function updateCol(idx: number, patch: Partial<ColConfig>) {
