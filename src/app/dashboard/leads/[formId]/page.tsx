@@ -5,17 +5,26 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Form, Response } from '@/types'
 import LeadsAnalytics from '@/components/dashboard/LeadsAnalytics'
+import TrashBin from '@/components/dashboard/TrashBin'
 import { ArrowLeft } from 'lucide-react'
 
 async function getData(formId: string, includeTest: boolean) {
-  const [formRes, responsesRes] = await Promise.all([
+  const [formRes, responsesRes, deletedRes] = await Promise.all([
     supabaseAdmin.from('forms').select('*').eq('id', formId).single(),
     supabaseAdmin
       .from('responses')
       .select('*')
       .eq('form_id', formId)
       .eq('completed', true)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false }),
+    supabaseAdmin
+      .from('responses')
+      .select('*')
+      .eq('form_id', formId)
+      .eq('completed', true)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false }),
   ])
 
   if (formRes.error || !formRes.data) return null
@@ -24,7 +33,9 @@ async function getData(formId: string, includeTest: boolean) {
   let responses = (responsesRes.data || []) as Response[]
   if (!includeTest) responses = responses.filter(r => !r.is_test)
 
-  return { form, responses }
+  const deletedResponses = (deletedRes.data || []) as Response[]
+
+  return { form, responses, deletedResponses }
 }
 
 export default async function FormLeadsPage({
@@ -32,16 +43,17 @@ export default async function FormLeadsPage({
   searchParams,
 }: {
   params: Promise<{ formId: string }>
-  searchParams: Promise<{ include_test?: string }>
+  searchParams: Promise<{ include_test?: string; tab?: string }>
 }) {
   const { formId } = await params
-  const { include_test } = await searchParams
+  const { include_test, tab } = await searchParams
   const includeTest = include_test === '1'
+  const activeTab = tab === 'trash' ? 'trash' : 'main'
 
   const result = await getData(formId, includeTest)
   if (!result) notFound()
 
-  const { form, responses } = result
+  const { form, responses, deletedResponses } = result
 
   const now = new Date()
   const isExpired = form.ends_at ? new Date(form.ends_at) < now : false
@@ -83,12 +95,40 @@ export default async function FormLeadsPage({
                 <p className="text-xs text-gray-500">測試筆數</p>
               </div>
             )}
+            {deletedResponses.length > 0 && (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2 text-center">
+                <p className="text-2xl font-bold text-red-400">{deletedResponses.length}</p>
+                <p className="text-xs text-gray-500">已刪除</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Analytics: charts + filters + table */}
-      <LeadsAnalytics responses={responses} form={form} includeTest={includeTest} />
+      {/* Tabs */}
+      {deletedResponses.length > 0 && (
+        <div className="mb-6 flex gap-2 border-b border-gray-800">
+          <Link
+            href={`/dashboard/leads/${formId}`}
+            className={`px-4 py-3 text-sm font-medium transition ${activeTab === 'main' ? 'border-b-2 border-violet-500 text-violet-400' : 'text-gray-400 hover:text-gray-300'}`}
+          >
+            名單 ({responses.length})
+          </Link>
+          <Link
+            href={`/dashboard/leads/${formId}?tab=trash`}
+            className={`px-4 py-3 text-sm font-medium transition ${activeTab === 'trash' ? 'border-b-2 border-red-500 text-red-400' : 'text-gray-400 hover:text-gray-300'}`}
+          >
+            回收區 ({deletedResponses.length})
+          </Link>
+        </div>
+      )}
+
+      {/* Content */}
+      {activeTab === 'main' ? (
+        <LeadsAnalytics responses={responses} form={form} includeTest={includeTest} />
+      ) : (
+        <TrashBin deletedResponses={deletedResponses} form={form} />
+      )}
     </div>
   )
 }

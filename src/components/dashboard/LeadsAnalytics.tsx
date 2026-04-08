@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Download, FlaskConical, X, ChevronRight, Link as LinkIcon, Copy, Check, ExternalLink } from 'lucide-react'
+import { Download, FlaskConical, X, ChevronRight, Link as LinkIcon, Copy, Check, ExternalLink, Trash2 } from 'lucide-react'
 import type { Response, Form } from '@/types'
 import ReportButton from '@/components/dashboard/ReportButton'
 import ReportHistory from '@/components/dashboard/ReportHistory'
@@ -46,9 +46,30 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
   const [filters, setFilters] = useState<Filter[]>([])
   const [selected, setSelected] = useState<Response | null>(null)
   const [otherExpanded, setOtherExpanded] = useState<Record<string, boolean>>({})
+  const [openAnswerExpanded, setOpenAnswerExpanded] = useState<Record<string, boolean>>({})
   const [latestShareUrl, setLatestShareUrl] = useState<string | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
   const [reportGenCount, setReportGenCount] = useState(0)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  async function deleteResponse(id: string) {
+    setDeletingId(id)
+    try {
+      const res = await fetch('/api/responses/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) {
+        setSelected(null)
+        router.refresh()
+      }
+    } catch (e) {
+      console.error('刪除失敗', e)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   function copyShareUrl() {
     if (!latestShareUrl) return
@@ -105,7 +126,7 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
   }, [filtered])
 
   const qStats = useMemo(() =>
-    questions.map((q, i) => {
+    questions.filter(q => q.type !== 'open_ended').map((q, i) => {
       const counts: Record<string, number> = {}
       const otherAnswers: string[] = []
       for (const r of filtered) {
@@ -246,6 +267,44 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
             <ExternalLink size={12} />
             開啟報告
           </a>
+        </div>
+      )}
+
+      {/* Open-ended answers */}
+      {questions.filter(q => q.type === 'open_ended').length > 0 && (
+        <div className="mb-6 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">開放式問題回答</p>
+          {questions.filter(q => q.type === 'open_ended').map((q, idx) => {
+            const answers = filtered
+              .map(r => r.answers?.[q.id])
+              .filter(Boolean) as string[]
+            return (
+              <div key={q.id} className="rounded-xl border border-gray-600 bg-gray-800">
+                <button
+                  onClick={() => setOtherExpanded(prev => ({ ...prev, [q.id]: !prev[q.id] }))}
+                  className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-white hover:bg-gray-700/50 transition rounded-xl"
+                >
+                  <span>Q{questions.findIndex(qq => qq.id === q.id) + 1}｜{q.question_text} ({answers.length} 筆回答)</span>
+                  <ChevronRight size={14} className={`text-gray-300 transition-transform ${otherExpanded[q.id] ? 'rotate-90' : ''}`} />
+                </button>
+                {otherExpanded[q.id] && (
+                  <div className="border-t border-gray-600 px-4 pb-4 pt-3 space-y-2">
+                    {answers.length === 0 ? (
+                      <p className="text-xs text-gray-500">無回答</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {answers.map((ans, i) => (
+                          <li key={i} className="rounded-lg border border-gray-600 bg-gray-700 px-3 py-2.5 text-sm text-white leading-snug">
+                            {ans}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -399,7 +458,17 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
                   <p className="font-semibold text-gray-100">作答詳情</p>
                   <p className="text-xs text-gray-500">{new Date(selected.created_at).toLocaleString('zh-TW')}</p>
                 </div>
-                <button onClick={() => setSelected(null)} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-800 hover:text-gray-200 transition"><X size={18} /></button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => deleteResponse(selected.id)}
+                    disabled={deletingId === selected.id}
+                    className="rounded-lg p-1.5 text-gray-500 hover:bg-red-500/10 hover:text-red-400 transition disabled:opacity-50"
+                    title="刪除此筆名單"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button onClick={() => setSelected(null)} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-800 hover:text-gray-200 transition"><X size={18} /></button>
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
                 {selected.is_test && <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-2 text-xs text-orange-400">此筆為測試資料</div>}
@@ -422,11 +491,33 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
                     <div className="flex flex-col gap-2">
                       {questions.map((q, i) => {
                         const ans = selected.answers?.[q.id]
+                        const isOpen = q.type === 'open_ended'
+                        const isExpanded = openAnswerExpanded[q.id]
+                        const isLong = ans && ans.length > 60
                         return (
                           <div key={q.id} className="rounded-xl border border-gray-800 bg-gray-900 px-4 py-3">
                             <p className="mb-1.5 text-xs text-gray-500">Q{i+1}｜{q.question_text}</p>
-                            {ans ? <span className="rounded-full bg-violet-900/40 px-3 py-1 text-xs font-medium text-violet-300">{ans}</span>
-                                 : <span className="text-xs text-gray-600">未作答</span>}
+                            {ans ? (
+                              isOpen && isLong ? (
+                                <div className="space-y-2">
+                                  <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
+                                    {isExpanded ? ans : `${ans.slice(0, 60)}...`}
+                                  </p>
+                                  <button
+                                    onClick={() => setOpenAnswerExpanded(prev => ({ ...prev, [q.id]: !prev[q.id] }))}
+                                    className="text-[11px] text-violet-400 hover:text-violet-300 transition"
+                                  >
+                                    {isExpanded ? '收起' : '展開'}
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className={`rounded-full bg-violet-900/40 px-3 py-1 text-xs font-medium text-violet-300 block w-fit ${isOpen ? 'bg-amber-900/40 text-amber-300' : ''}`}>
+                                  {ans}
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-xs text-gray-600">未作答</span>
+                            )}
                           </div>
                         )
                       })}

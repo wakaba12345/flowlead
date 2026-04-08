@@ -42,3 +42,5 @@ next-env.d.ts
 
 # local utility scripts (contain secrets)
 /scripts
+
+.vercel
