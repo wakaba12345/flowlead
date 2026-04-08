@@ -1,6 +1,6 @@
 export interface Question {
   id: string
-  type: 'single_choice' | 'multi_choice'
+  type: 'single_choice' | 'multi_choice' | 'open_ended'
   question_text: string
   options: string[]
 }
@@ -64,6 +64,7 @@ export interface Response {
   completed: boolean
   is_test: boolean
   created_at: string
+  deleted_at: string | null
 }
 
 export interface Tenant {
