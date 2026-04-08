@@ -21,7 +21,13 @@ export async function POST(req: NextRequest) {
   if (body.form_id && body.rows) {
     const { form_id, tenant_id, leadColumns, questionColumns, rows } = body
     const qIdMap: Record<string, string> = {}
-    questionColumns.forEach((q: { csvHeader: string; questionId: string }) => { qIdMap[q.csvHeader] = q.questionId })
+    const multiSet = new Set<string>()
+    const openSet = new Set<string>()
+    questionColumns.forEach((q: { csvHeader: string; questionId: string; isMulti?: boolean; isOpen?: boolean }) => {
+      qIdMap[q.csvHeader] = q.questionId
+      if (q.isMulti) multiSet.add(q.csvHeader)
+      if (q.isOpen) openSet.add(q.csvHeader)
+    })
 
     const records = rows.map((row: Record<string, string>) => {
       const lead_data: Record<string, string> = {}
@@ -29,8 +35,17 @@ export async function POST(req: NextRequest) {
       for (const [header, value] of Object.entries(row)) {
         if (!value) continue
         const lc = leadColumns.find((l: { csvHeader: string }) => l.csvHeader === header)
-        if (lc) lead_data[lc.fieldId] = value
-        else if (qIdMap[header]) answers[qIdMap[header]] = value
+        if (lc) {
+          lead_data[lc.fieldId] = value
+        } else if (qIdMap[header]) {
+          // Multi-select: Google Forms exports as "A, B, C" or "A,B,C" → store as "A|||B|||C"
+          // Split by comma (with or without spaces) and normalize
+          if (multiSet.has(header)) {
+            answers[qIdMap[header]] = value.split(/,\s*/).map((s: string) => s.trim()).filter(Boolean).join('|||')
+          } else {
+            answers[qIdMap[header]] = value
+          }
+        }
       }
       return {
         form_id, tenant_id,
@@ -54,14 +69,30 @@ export async function POST(req: NextRequest) {
   if (!tenantId) return NextResponse.json({ error: 'Tenant not found' }, { status: 500 })
 
   // Build unique options from sample rows only (avoid huge payload)
-  const questions = questionColumns.map((q: { csvHeader: string; questionText: string; questionId: string }) => ({
-    id: q.questionId,
-    type: 'single_choice' as const,
-    question_text: q.questionText,
-    options: Array.from(new Set(
-      (sampleRows || []).map((r: Record<string, string>) => r[q.csvHeader]).filter(Boolean)
-    )).slice(0, 30) as string[],
-  }))
+  const questions = questionColumns.map((q: { csvHeader: string; questionText: string; questionId: string; isMulti?: boolean; isOpen?: boolean }) => {
+    // For open-ended questions, store raw values without extracting options
+    if (q.isOpen) {
+      return {
+        id: q.questionId,
+        type: 'open_ended' as const,
+        question_text: q.questionText,
+        options: [],
+      }
+    }
+
+    const rawValues: string[] = (sampleRows || []).map((r: Record<string, string>) => r[q.csvHeader]).filter(Boolean)
+    // For multi-select columns, expand comma-separated values to get all unique sub-options
+    // Split by comma and trim whitespace (handles ", ", "," with or without spaces)
+    const allOptions = q.isMulti
+      ? Array.from(new Set(rawValues.flatMap((v: string) => v.split(/,\s*/).map((s: string) => s.trim()).filter(Boolean))))
+      : Array.from(new Set(rawValues))
+    return {
+      id: q.questionId,
+      type: q.isMulti ? 'multi_choice' as const : 'single_choice' as const,
+      question_text: q.questionText,
+      options: allOptions.slice(0, 50) as string[],
+    }
+  })
 
   const leadFields = leadColumns.map((l: { csvHeader: string; fieldId: string; fieldLabel: string }) => ({
     id: l.fieldId, label: l.fieldLabel, type: 'text' as const, required: false,

@@ -19,7 +19,7 @@ const LEAD_FIELD_MAP: Record<string, { id: string; label: string }> = {
   '時間戳記\n': { id: '_ts', label: '時間戳記' }, '填寫時間': { id: '_ts', label: '填寫時間' },
 }
 
-type ColType = 'lead' | 'question' | 'skip'
+type ColType = 'lead' | 'question' | 'multi_question' | 'open_question' | 'skip'
 
 interface ColConfig {
   header: string
@@ -112,8 +112,11 @@ export default function ImportDataset() {
 
   async function doImport() {
     if (!title.trim()) { setError('請輸入資料集名稱'); return }
-    const questionCols = cols.filter(c => c.type === 'question').map((c, i) => ({
-      csvHeader: c.header, questionText: c.header, questionId: `q${i + 1}`,
+    let qIdx = 0
+    const questionCols = cols.filter(c => c.type === 'question' || c.type === 'multi_question' || c.type === 'open_question').map(c => ({
+      csvHeader: c.header, questionText: c.header, questionId: `q${++qIdx}`,
+      isMulti: c.type === 'multi_question',
+      isOpen: c.type === 'open_question',
     }))
     const leadCols = cols.filter(c => c.type === 'lead').map(c => ({
       csvHeader: c.header, fieldId: c.leadId!, fieldLabel: c.leadLabel!,
@@ -174,7 +177,7 @@ export default function ImportDataset() {
     setHeaders([]); setRows([]); setCols([]); setTitle(''); setError('')
   }
 
-  const questionCount = cols.filter(c => c.type === 'question').length
+  const questionCount = cols.filter(c => c.type === 'question' || c.type === 'multi_question' || c.type === 'open_question').length
   const leadCount = cols.filter(c => c.type === 'lead').length
 
   return (
@@ -241,7 +244,9 @@ export default function ImportDataset() {
                       <p className="text-xs text-gray-600">{rows.length} 筆資料 · {headers.length} 欄</p>
                     </div>
                     <div className="mb-3 space-y-1 rounded-lg border border-gray-700 bg-gray-800/60 px-3 py-2 text-xs">
-                      <p><span className="font-semibold text-violet-300">統計欄位</span> — 問卷題目，系統會計算每個選項的人數，用於圖表和 AI 報告</p>
+                      <p><span className="font-semibold text-violet-300">統計欄位</span> — 單選題目，計算每個選項人數，用於圖表和 AI 報告</p>
+                      <p><span className="font-semibold text-orange-300">複選統計</span> — 複選/核取方塊（Google 表單），自動拆分逗號分隔的多選答案</p>
+                      <p><span className="font-semibold text-amber-300">開放式</span> — 開放式問題，列出所有原始答案，不生成圖表</p>
                       <p><span className="font-semibold text-cyan-300">個人資料</span> — 姓名、Email、電話等受訪者基本資料，會顯示在名單列表</p>
                       <p><span className="font-semibold text-gray-400">略過</span> — 不匯入（時間戳記等不需要的欄位）</p>
                     </div>
@@ -250,14 +255,16 @@ export default function ImportDataset() {
                         <div key={col.header} className="flex items-center gap-3">
                           <span className="min-w-0 flex-1 truncate text-sm text-gray-300" title={col.header}>{col.header}</span>
                           <div className="flex shrink-0 gap-1">
-                            {(['question', 'lead', 'skip'] as ColType[]).map(t => (
+                            {(['question', 'multi_question', 'open_question', 'lead', 'skip'] as ColType[]).map(t => (
                               <button key={t} onClick={() => updateCol(idx, { type: t })}
                                 className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${col.type === t
                                   ? t === 'question' ? 'bg-violet-600 text-white'
+                                    : t === 'multi_question' ? 'bg-orange-600 text-white'
+                                    : t === 'open_question' ? 'bg-amber-600 text-white'
                                     : t === 'lead' ? 'bg-cyan-600 text-white'
                                     : 'bg-gray-600 text-white'
                                   : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
-                                {t === 'question' ? '統計欄位' : t === 'lead' ? '個人資料' : '略過'}
+                                {t === 'question' ? '統計欄位' : t === 'multi_question' ? '複選統計' : t === 'open_question' ? '開放式' : t === 'lead' ? '個人資料' : '略過'}
                               </button>
                             ))}
                           </div>
