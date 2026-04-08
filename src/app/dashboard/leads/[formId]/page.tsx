@@ -9,31 +9,29 @@ import TrashBin from '@/components/dashboard/TrashBin'
 import { ArrowLeft } from 'lucide-react'
 
 async function getData(formId: string, includeTest: boolean) {
-  const [formRes, responsesRes, deletedRes] = await Promise.all([
+  const [formRes, responsesRes] = await Promise.all([
     supabaseAdmin.from('forms').select('*').eq('id', formId).single(),
     supabaseAdmin
       .from('responses')
       .select('*')
       .eq('form_id', formId)
       .eq('completed', true)
-      .is('deleted_at', null)
       .order('created_at', { ascending: false }),
-    supabaseAdmin
-      .from('responses')
-      .select('*')
-      .eq('form_id', formId)
-      .eq('completed', true)
-      .not('deleted_at', 'is', null)
-      .order('deleted_at', { ascending: false }),
   ])
 
   if (formRes.error || !formRes.data) return null
 
   const form = formRes.data as Form
-  let responses = (responsesRes.data || []) as Response[]
+  const allResponses = (responsesRes.data || []) as Response[]
+
+  // Filter in app layer: deleted_at field may not exist yet in the table
+  const active = allResponses.filter(r => !r.deleted_at)
+  const deleted = allResponses.filter(r => !!r.deleted_at)
+
+  let responses = active
   if (!includeTest) responses = responses.filter(r => !r.is_test)
 
-  const deletedResponses = (deletedRes.data || []) as Response[]
+  const deletedResponses = deleted
 
   return { form, responses, deletedResponses }
 }
