@@ -8,6 +8,7 @@ export default async function LotteryPage() {
   const { data: forms } = await supabaseAdmin
     .from('forms')
     .select('id, title, schema, tenant_id, status, created_at, updated_at, lead_capture, theme, webhook_url, ends_at')
+    .neq('status', 'archived')
     .order('created_at', { ascending: false })
 
   return (

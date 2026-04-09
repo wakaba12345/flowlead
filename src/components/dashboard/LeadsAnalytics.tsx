@@ -144,17 +144,19 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
         }
       }
       const total = Object.values(counts).reduce((s, n) => s + n, 0)
-      // Sort by count desc, keep 其他 at end
-      const regularOptions = q.options.filter(o => o !== '__other__')
+      const cleanOptions = q.options.filter(o => o !== '__other__' && o !== '其他')
+      const regularOptions = cleanOptions
         .map(o => ({ label: o, count: counts[o] || 0 }))
         .sort((a, b) => b.count - a.count)
+      // Append 其他 once at end (covers both checkbox option named "其他" and free-text "其他:")
+      const otherCount = counts['其他'] || 0
       return {
         id: q.id,
         title: `Q${i+1}｜${q.question_text}`,
         questionText: q.question_text,
-        options: q.options.filter(o => o !== '__other__'),
+        options: cleanOptions,
         total,
-        data: [...regularOptions, ...(counts['其他'] ? [{ label: '其他', count: counts['其他'] }] : [])],
+        data: [...regularOptions, ...(otherCount ? [{ label: '其他', count: otherCount }] : [])],
         otherAnswers,
       }
     })
@@ -311,6 +313,9 @@ export default function LeadsAnalytics({ responses, form, includeTest }: Props) 
       {/* Charts */}
       {(leadStats.length > 0 || qStats.some(q => q.total > 0)) && (
         <div className="mb-6">
+          <p className="mb-3 text-xs text-gray-500">
+            💡 點選任一條件即可篩選名單，可同時疊加多個條件
+          </p>
           {leadStats.length > 0 && (
             <>
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">

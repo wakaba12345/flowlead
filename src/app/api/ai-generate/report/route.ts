@@ -6,7 +6,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { form_title, conversion_goal, total, leadFieldStats, questionStats, crossTabs, leadChartsHtml, questionChartsHtml } = body
+  const { form_title, conversion_goal, total, leadFieldStats, questionStats, openEndedStats, crossTabs, leadChartsHtml, questionChartsHtml, openEndedHtml } = body
 
   if (!form_title || total == null) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -26,13 +26,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Report prompt not configured in settings' }, { status: 500 })
   }
 
-  const statsJson = JSON.stringify({ form_title, conversion_goal, total, leadFieldStats, questionStats, crossTabs }, null, 2)
+  const statsJson = JSON.stringify({ form_title, conversion_goal, total, leadFieldStats, questionStats, openEndedStats, crossTabs }, null, 2)
 
-  const userMessage = promptRow.prompt_text
+  let userMessage = promptRow.prompt_text
     .replace('{{form_title}}', form_title)
     .replace('{{conversion_goal}}', conversion_goal || '未指定')
     .replace('{{total}}', String(total))
     .replace('{{stats_json}}', statsJson)
+
+  // Append open-ended analysis instruction if there are open-ended questions
+  if (openEndedStats && openEndedStats.length > 0) {
+    userMessage += `
+
+【開放式問題摘要指示】
+請在報告中針對以下每一題開放式問題，各自生成一段獨立摘要（約150-200字）。
+摘要需：1) 歸納主要回答主題 2) 點出共同觀點或關鍵詞 3) 提出值得注意的特殊意見。
+請使用以下 HTML 結構包裝每題摘要（保持 class 名稱不變，供 CSS 套用樣式）：
+
+<div class="open-ended-summary">
+  <h4 class="open-ended-title">（填入題目文字）</h4>
+  <p class="open-ended-body">（填入摘要內容）</p>
+</div>
+
+開放式題目資料已包含在 stats_json 的 openEndedStats 欄位中。`
+  }
+
+  // Append finding heading instruction
+  userMessage += `
+
+【交叉分析發現標題格式指示】
+在交叉分析或關鍵發現區塊中，每一條「發現」請使用以下 HTML 格式（保持 class 名稱不變）：
+<h3 class="finding-heading">發現N：（標題文字）</h3>
+這樣可讓排版更醒目。`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
@@ -68,32 +93,70 @@ export async function POST(req: NextRequest) {
     * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important }
 
     /* Screen: ensure footer text has good contrast on dark backgrounds */
-    footer, [class*="footer"], [id*="footer"] {
-      color: #cbd5e1 !important;
+    footer, [class*="footer"], [id*="footer"] { color: #cbd5e1 !important; }
+    footer *, [class*="footer"] *, [id*="footer"] * { color: #cbd5e1 !important; }
+
+    /* ── Finding headings (交叉分析 發現N) ── */
+    h3.finding-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px !important;
+      font-weight: 800 !important;
+      color: #ffffff !important;
+      background: rgba(99,102,241,0.18) !important;
+      border-left: 4px solid #6366f1 !important;
+      border-radius: 0 8px 8px 0 !important;
+      padding: 10px 16px !important;
+      margin: 28px 0 12px !important;
+      letter-spacing: .3px;
     }
-    footer *, [class*="footer"] *, [id*="footer"] * {
+
+    /* ── Open-ended summary blocks ── */
+    .open-ended-summary {
+      background: rgba(15,23,42,0.4) !important;
+      border: 1px solid rgba(148,163,184,0.15) !important;
+      border-radius: 10px !important;
+      padding: 16px 20px !important;
+      margin: 16px 0 !important;
+    }
+    h4.open-ended-title {
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      color: #93c5fd !important;
+      margin: 0 0 8px !important;
+      padding-bottom: 8px !important;
+      border-bottom: 1px solid rgba(148,163,184,0.2) !important;
+    }
+    p.open-ended-body {
+      font-size: 14px !important;
+      line-height: 1.75 !important;
       color: #cbd5e1 !important;
+      margin: 0 !important;
     }
 
     @media print {
-      /* Remove the charts-section outer background — show white/transparent instead */
+      /* Remove the charts-section outer background */
       #rpt-charts { background: transparent !important; padding-top: 16px !important; padding-bottom: 16px !important; }
-      /* Section headings adapt to white background */
       #rpt-charts .rpt-section-title { color: #374151 !important; }
       #rpt-charts .rpt-section-line  { background: #d1d5db !important; }
 
-      /* Force all text in the AI analysis to dark so it's readable on white paper */
       body { background: white !important; }
       body * { color: #1e293b !important; }
-
-      /* Restore white text on colored badge pills so they stay readable */
       .rpt-badge { color: white !important; }
 
-      /* Footer: visible on white paper */
-      footer, [class*="footer"], [id*="footer"],
-      footer *, [class*="footer"] *, [id*="footer"] * {
-        color: #374151 !important;
+      /* Finding headings: readable on white paper */
+      h3.finding-heading {
+        color: #312e81 !important;
+        background: #ede9fe !important;
+        border-left-color: #6366f1 !important;
       }
+      h4.open-ended-title { color: #1e40af !important; }
+      p.open-ended-body   { color: #1e293b !important; }
+      .open-ended-summary { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+
+      footer, [class*="footer"], [id*="footer"],
+      footer *, [class*="footer"] *, [id*="footer"] * { color: #374151 !important; }
     }
   </style>`
   html = html.replace(/<\/head>/i, printStyle + '</head>')

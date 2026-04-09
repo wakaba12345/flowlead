@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Form } from '@/types'
 import { ChevronRight, Users, CalendarDays, Clock } from 'lucide-react'
 import ImportDataset from '@/components/dashboard/ImportDataset'
+import DeleteFormButton from '@/components/dashboard/DeleteFormButton'
 
 export default async function LeadsPage() {
   const formsRes = await supabaseAdmin
@@ -57,8 +58,10 @@ export default async function LeadsPage() {
             const count = countMap[form.id] || 0
             const now = new Date()
             const isExpired = form.ends_at ? new Date(form.ends_at) < now : false
-            const statusLabel =
-              form.status === 'active' && !isExpired ? { text: '上線中', cls: 'text-green-400 bg-green-400/10' }
+            const isImported = form.status === 'imported'
+            const statusLabel = isImported
+              ? { text: '外部匯入', cls: 'text-blue-400 bg-blue-400/10' }
+              : form.status === 'active' && !isExpired ? { text: '上線中', cls: 'text-green-400 bg-green-400/10' }
               : isExpired ? { text: '已到期', cls: 'text-orange-400 bg-orange-400/10' }
               : { text: '已停用', cls: 'text-gray-400 bg-gray-700' }
 
@@ -68,7 +71,7 @@ export default async function LeadsPage() {
                 href={`/dashboard/leads/${form.id}`}
                 className="group flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-900 px-5 py-4 transition hover:border-violet-500/50 hover:bg-gray-800/60 active:scale-[0.99] active:bg-gray-800"
               >
-                {/* Status dot */}
+                {/* Status badge */}
                 <div className="shrink-0">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusLabel.cls}`}>
                     {statusLabel.text}
@@ -85,12 +88,14 @@ export default async function LeadsPage() {
                       <CalendarDays size={11} />
                       建立 {new Date(form.created_at).toLocaleDateString('zh-TW')}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Clock size={11} />
-                      {form.ends_at
-                        ? `結束 ${new Date(form.ends_at).toLocaleDateString('zh-TW')}`
-                        : '永久開放'}
-                    </span>
+                    {!isImported && (
+                      <span className="flex items-center gap-1">
+                        <Clock size={11} />
+                        {form.ends_at
+                          ? `結束 ${new Date(form.ends_at).toLocaleDateString('zh-TW')}`
+                          : '永久開放'}
+                      </span>
+                    )}
                     <span className="text-xs text-gray-600">
                       {form.schema?.questions?.length || 0} 題
                     </span>
@@ -100,10 +105,13 @@ export default async function LeadsPage() {
                 {/* Response count */}
                 <div className="shrink-0 text-right">
                   <p className="text-2xl font-bold text-gray-100">{count.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">回答人數</p>
+                  <p className="text-xs text-gray-500">{isImported ? '匯入筆數' : '回答人數'}</p>
                 </div>
 
                 <ChevronRight size={18} className="shrink-0 text-gray-600 transition group-hover:translate-x-0.5 group-hover:text-violet-400" />
+                {(isImported || form.status !== 'active' || isExpired) && (
+                  <DeleteFormButton formId={form.id} />
+                )}
               </Link>
             )
           })}

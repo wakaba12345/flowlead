@@ -3,13 +3,40 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { LayoutDashboard, FileText, Users, Settings, Menu, X, Gift } from 'lucide-react'
+import { LayoutDashboard, FileText, Users, Settings, Menu, X, Gift, BookOpen, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import LogoutButton from '@/components/dashboard/LogoutButton'
+import { ReportGenerationProvider, useReportGeneration } from '@/contexts/ReportGenerationContext'
+
+function GenerationStatusBar() {
+  const { status, formTitle, errorMsg, dismiss } = useReportGeneration()
+  if (status === 'idle') return null
+  return (
+    <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-2xl text-sm font-medium max-w-sm
+      ${status === 'generating' ? 'border-violet-500/40 bg-violet-950/90 text-violet-200' : ''}
+      ${status === 'done'       ? 'border-green-500/40 bg-green-950/90 text-green-200' : ''}
+      ${status === 'error'      ? 'border-red-500/40 bg-red-950/90 text-red-200' : ''}
+    `}>
+      {status === 'generating' && <Loader2 size={16} className="shrink-0 animate-spin text-violet-400" />}
+      {status === 'done'       && <CheckCircle2 size={16} className="shrink-0 text-green-400" />}
+      {status === 'error'      && <AlertCircle size={16} className="shrink-0 text-red-400" />}
+      <span className="flex-1 truncate">
+        {status === 'generating' && `AI 分析中：《${formTitle}》`}
+        {status === 'done'       && `報告已生成：《${formTitle}》`}
+        {status === 'error'      && (errorMsg || '生成失敗')}
+      </span>
+      {status !== 'generating' && (
+        <button onClick={dismiss} className="shrink-0 opacity-60 hover:opacity-100 transition"><X size={14} /></button>
+      )}
+    </div>
+  )
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
+    <ReportGenerationProvider>
+    <GenerationStatusBar />
     <div className="flex min-h-screen bg-gray-950 text-gray-100">
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -46,6 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <NavLink href="/dashboard/leads" icon={<Users size={16} />} onClick={() => setSidebarOpen(false)}>名單</NavLink>
           <NavLink href="/dashboard/lottery" icon={<Gift size={16} />} onClick={() => setSidebarOpen(false)}>抽獎</NavLink>
           <NavLink href="/dashboard/settings" icon={<Settings size={16} />} onClick={() => setSidebarOpen(false)}>設定</NavLink>
+          <NavLink href="/dashboard/guide" icon={<BookOpen size={16} />} onClick={() => setSidebarOpen(false)}>使用手冊</NavLink>
         </nav>
 
         <div className="mt-auto border-t border-gray-800 pt-4">
@@ -73,6 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+    </ReportGenerationProvider>
   )
 }
 

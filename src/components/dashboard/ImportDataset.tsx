@@ -2,73 +2,56 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, X, ChevronRight, Loader2, AlertCircle, FileSpreadsheet } from 'lucide-react'
+import { Upload, X, ChevronRight, Loader2, AlertCircle, FileSpreadsheet, Sparkles } from 'lucide-react'
 
-// Known lead field keywords → auto-classify
-const LEAD_FIELD_MAP: Record<string, { id: string; label: string }> = {
-  '姓名': { id: 'name', label: '姓名' }, 'name': { id: 'name', label: '姓名' }, '名字': { id: 'name', label: '姓名' },
-  'email': { id: 'email', label: 'Email' }, 'e-mail': { id: 'email', label: 'Email' },
-  'Email': { id: 'email', label: 'Email' }, 'EMAIL': { id: 'email', label: 'Email' },
-  '電子郵件': { id: 'email', label: 'Email' }, '電郵': { id: 'email', label: 'Email' },
-  '電話': { id: 'phone', label: '電話' }, 'phone': { id: 'phone', label: '電話' },
-  '手機': { id: 'phone', label: '電話' }, '手機號碼': { id: 'phone', label: '電話' }, '聯絡電話': { id: 'phone', label: '電話' },
-  '年齡': { id: 'age', label: '年齡' }, 'age': { id: 'age', label: '年齡' },
-  '性別': { id: 'gender', label: '性別' }, 'gender': { id: 'gender', label: '性別' },
-  '年收入': { id: 'income', label: '年收入' }, 'income': { id: 'income', label: '年收入' },
-  '地址': { id: 'address', label: '地址' }, 'address': { id: 'address', label: '地址' },
-  '婚姻狀況': { id: 'marital', label: '婚姻狀況' }, '有無子女': { id: 'has_children', label: '有無子女' },
-  '時間戳記': { id: '_ts', label: '時間戳記' }, 'Timestamp': { id: '_ts', label: '時間戳記' },
-  '時間戳記\n': { id: '_ts', label: '時間戳記' }, '填寫時間': { id: '_ts', label: '填寫時間' },
-}
-
-// Find lead field by keyword matching (case-insensitive, partial match)
-function findLeadField(header: string): { id: string; label: string } | null {
-  const h = header.trim()
-  if (LEAD_FIELD_MAP[h]) return LEAD_FIELD_MAP[h]
-  const lower = h.toLowerCase()
-  if (lower.includes('email') || lower.includes('e-mail') || h.includes('電子郵件') || h.includes('電郵'))
-    return { id: 'email', label: 'Email' }
-  if (lower.includes('phone') || h.includes('電話') || h.includes('手機'))
-    return { id: 'phone', label: '電話' }
-  if (lower.includes('name') || h.includes('姓名') || h.includes('名字'))
-    return { id: 'name', label: '姓名' }
-  return null
-}
-
-type ColType = 'lead' | 'question' | 'multi_question' | 'open_question' | 'skip'
+type ColType = 'lead' | 'question' | 'multi_question' | 'checkbox_option' | 'open_question' | 'skip'
 
 interface ColConfig {
   header: string
   type: ColType
   leadId?: string
   leadLabel?: string
+  groupName?: string   // for checkbox_option: the question this option belongs to
+  optionLabel?: string // for checkbox_option: display text of this option
 }
 
 type Row = Record<string, string>
-type Step = 'upload' | 'map' | 'done'
+type Step = 'upload' | 'classifying' | 'map' | 'done'
 
+// ── CSV parser: handles quoted fields with embedded newlines ───────────────
 function parseCSV(text: string): { headers: string[]; rows: Row[] } {
-  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim())
-  if (lines.length < 2) return { headers: [], rows: [] }
-  function parseLine(line: string): string[] {
-    const result: string[] = []; let cur = '', inQ = false
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]
-      if (ch === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++ } else inQ = !inQ }
-      else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = '' }
-      else cur += ch
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const allRows: string[][] = []
+  let row: string[] = [], cur = '', inQ = false
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i]
+    if (ch === '"') {
+      if (inQ && normalized[i + 1] === '"') { cur += '"'; i++ }
+      else inQ = !inQ
+    } else if (ch === ',' && !inQ) {
+      row.push(cur.trim()); cur = ''
+    } else if (ch === '\n' && !inQ) {
+      row.push(cur.trim()); cur = ''
+      if (row.some(v => v)) allRows.push(row)
+      row = []
+    } else {
+      cur += ch
     }
-    result.push(cur.trim())
-    return result
   }
-  const headers = parseLine(lines[0])
-  const rows = lines.slice(1).map(l => {
-    const vals = parseLine(l)
-    const row: Row = {}
-    headers.forEach((h, i) => { row[h] = vals[i] || '' })
-    return row
+  if (cur || row.length > 0) { row.push(cur.trim()); if (row.some(v => v)) allRows.push(row) }
+  if (allRows.length < 2) return { headers: [], rows: [] }
+  const headers = allRows[0]
+  const rows = allRows.slice(1).map(vals => {
+    const r: Row = {}
+    headers.forEach((h, i) => { r[h] = vals[i] || '' })
+    return r
   }).filter(r => Object.values(r).some(v => v))
   return { headers, rows }
+}
+
+function decodeBuffer(buf: ArrayBuffer): string {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf) }
+  catch { try { return new TextDecoder('big5').decode(buf) } catch { return new TextDecoder('utf-8', { fatal: false }).decode(buf) } }
 }
 
 export default function ImportDataset() {
@@ -83,40 +66,91 @@ export default function ImportDataset() {
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  function autoClassify(headers: string[]): ColConfig[] {
+  // ── Fallback rule-based classification ────────────────────────────────────
+  function rulesClassify(headers: string[], sampleRows: Row[]): ColConfig[] {
     return headers.map(h => {
-      const lf = findLeadField(h)
-      if (lf && lf.id !== '_ts') return { header: h, type: 'lead', leadId: lf.id, leadLabel: lf.label }
-      if (lf?.id === '_ts') return { header: h, type: 'skip' }
+      const ht = h.trim()
+      // Timestamp
+      if (ht.includes('時間戳記') || ht.toLowerCase() === 'timestamp' || ht.includes('填寫時間'))
+        return { header: h, type: 'skip' }
+      // Wide-format checkbox: header contains \n- or \n - pattern
+      const cbMatch = ht.match(/^(.+?)\n[-–]\s*(.+)$/)
+      if (cbMatch)
+        return { header: h, type: 'checkbox_option', groupName: cbMatch[1].trim(), optionLabel: cbMatch[2].trim() }
+      // Lead fields by keyword
+      const lower = ht.toLowerCase()
+      if (ht === '姓名' || ht === '名字' || lower === 'name')
+        return { header: h, type: 'lead', leadId: 'name', leadLabel: '姓名' }
+      if (lower.includes('email') || lower.includes('e-mail') || ht.includes('電子郵件') || ht.includes('電郵'))
+        return { header: h, type: 'lead', leadId: 'email', leadLabel: 'Email' }
+      if (ht.includes('電話') || ht.includes('手機') || lower.includes('phone'))
+        return { header: h, type: 'lead', leadId: 'phone', leadLabel: '電話' }
+      if (ht === '性別' || lower === 'gender')
+        return { header: h, type: 'lead', leadId: 'gender', leadLabel: '性別' }
+      if (ht === '年齡' || lower === 'age')
+        return { header: h, type: 'lead', leadId: 'age', leadLabel: '年齡' }
+      if (ht === '稱呼')
+        return { header: h, type: 'skip' }
+      // Heuristic: if >5 unique non-empty values and avg frequency < 2 → likely open-ended
+      const vals = sampleRows.map(r => (r[h] || '').trim()).filter(Boolean)
+      if (vals.length > 0) {
+        const unique = new Set(vals)
+        const avgFreq = vals.length / unique.size
+        if (unique.size > 5 && avgFreq < 2) return { header: h, type: 'open_question' }
+      }
       return { header: h, type: 'question' }
     })
   }
 
-  function decodeBuffer(buf: ArrayBuffer): string {
-    // Try UTF-8 first (strict); fall back to Big5 for Traditional Chinese files
-    try {
-      return new TextDecoder('utf-8', { fatal: true }).decode(buf)
-    } catch {
-      try {
-        return new TextDecoder('big5').decode(buf)
-      } catch {
-        return new TextDecoder('utf-8', { fatal: false }).decode(buf)
+  // ── AI classification ─────────────────────────────────────────────────────
+  async function aiClassify(headers: string[], sampleRows: Row[]): Promise<ColConfig[]> {
+    const res = await fetch('/api/classify-columns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ headers, sampleRows: sampleRows.slice(0, 3) }),
+    })
+    if (!res.ok) throw new Error('AI 分類失敗')
+    const { columns, error } = await res.json()
+    if (error || !columns) throw new Error(error || 'AI 回傳異常')
+
+    // Map AI result back to ColConfig[]
+    return headers.map(h => {
+      const ai = columns.find((c: { header: string }) => c.header === h || c.header === h.trim())
+      if (!ai) return { header: h, type: 'question' as ColType }
+      const type = (['lead','question','multi_question','checkbox_option','open_question','skip'].includes(ai.type)
+        ? ai.type : 'question') as ColType
+      return {
+        header: h,
+        type,
+        leadId:      ai.field_id,
+        leadLabel:   ai.field_label,
+        groupName:   ai.group_name,
+        optionLabel: ai.option_label,
       }
-    }
+    })
   }
 
   function handleFile(file: File) {
     setError('')
     const reader = new FileReader()
-    reader.onload = e => {
+    reader.onload = async e => {
       const buf = e.target?.result as ArrayBuffer
-      const text = decodeBuffer(buf).replace(/^\uFEFF/, '') // strip BOM
+      const text = decodeBuffer(buf).replace(/^\uFEFF/, '')
       const { headers, rows } = parseCSV(text)
       if (!headers.length || rows.length === 0) { setError('無法解析 CSV，請確認格式正確且包含資料'); return }
       setHeaders(headers)
       setRows(rows)
-      setCols(autoClassify(headers))
-      setTitle('')
+      // Pre-fill title from filename (strip .csv extension)
+      setTitle(file.name.replace(/\.csv$/i, '').trim())
+      setStep('classifying')
+
+      try {
+        const classified = await aiClassify(headers, rows)
+        setCols(classified)
+      } catch {
+        // Fallback to rule-based if AI fails
+        setCols(rulesClassify(headers, rows))
+      }
       setStep('map')
     }
     reader.readAsArrayBuffer(file)
@@ -125,59 +159,62 @@ export default function ImportDataset() {
   function updateCol(idx: number, patch: Partial<ColConfig>) {
     setCols(prev => prev.map((c, i) => {
       if (i !== idx) return c
-      const updated = { ...c, ...patch }
-      // When switching to 'lead' type manually and leadId not set, auto-detect or use header as fallback
-      if (updated.type === 'lead' && !updated.leadId) {
-        const lf = findLeadField(updated.header)
-        updated.leadId = lf ? lf.id : updated.header.trim()
-        updated.leadLabel = lf ? lf.label : updated.header.trim()
-      }
-      return updated
+      return { ...c, ...patch }
     }))
   }
 
   async function doImport() {
     if (!title.trim()) { setError('請輸入資料集名稱'); return }
+
     let qIdx = 0
     const questionCols = cols.filter(c => c.type === 'question' || c.type === 'multi_question' || c.type === 'open_question').map(c => ({
       csvHeader: c.header, questionText: c.header, questionId: `q${++qIdx}`,
-      isMulti: c.type === 'multi_question',
-      isOpen: c.type === 'open_question',
+      isMulti: c.type === 'multi_question', isOpen: c.type === 'open_question',
     }))
     const leadCols = cols.filter(c => c.type === 'lead' && c.leadId).map(c => ({
       csvHeader: c.header, fieldId: c.leadId!, fieldLabel: c.leadLabel || c.header,
     }))
-    if (questionCols.length === 0 && leadCols.length === 0) { setError('請至少設定一個統計欄位或個人資料欄位'); return }
 
-    setImporting(true)
-    setError('')
+    // Build checkbox groups: group columns by groupName
+    const cbCols = cols.filter(c => c.type === 'checkbox_option' && c.groupName)
+    const cbGroups: Record<string, { groupName: string; headers: string[]; optionLabels: string[] }> = {}
+    for (const c of cbCols) {
+      if (!cbGroups[c.groupName!]) cbGroups[c.groupName!] = { groupName: c.groupName!, headers: [], optionLabels: [] }
+      cbGroups[c.groupName!].headers.push(c.header)
+      cbGroups[c.groupName!].optionLabels.push(c.optionLabel || c.header.split(/\n[-–]\s*/).pop() || c.header)
+    }
+    const checkboxGroups = Object.values(cbGroups).map((g, i) => ({
+      groupName: g.groupName, questionId: `cg${i + 1}`,
+      headers: g.headers, optionLabels: g.optionLabels,
+    }))
+
+    if (questionCols.length === 0 && leadCols.length === 0 && checkboxGroups.length === 0) {
+      setError('請至少設定一個統計欄位或個人資料欄位'); return
+    }
+
+    setImporting(true); setError('')
     try {
-      // Step 1: create form (send only sample rows for options detection)
       const step1Res = await fetch('/api/import-dataset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: title.trim(),
-          leadColumns: leadCols,
-          questionColumns: questionCols,
+          title: title.trim(), leadColumns: leadCols,
+          questionColumns: questionCols, checkboxGroups,
           sampleRows: rows.slice(0, 200),
         }),
       })
       const step1 = await step1Res.json().catch(() => ({ error: '伺服器回應異常' }))
       if (!step1Res.ok) { setError(step1.error || '建立資料集失敗'); return }
-
       const { form_id, tenant_id } = step1
 
-      // Step 2: send rows in batches of 200
       const BATCH = 200
       for (let i = 0; i < rows.length; i += BATCH) {
         const batchRes = await fetch('/api/import-dataset', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            form_id, tenant_id,
-            leadColumns: leadCols,
-            questionColumns: questionCols,
+            form_id, tenant_id, leadColumns: leadCols,
+            questionColumns: questionCols, checkboxGroups,
             rows: rows.slice(i, i + BATCH),
           }),
         })
@@ -186,10 +223,7 @@ export default function ImportDataset() {
       }
 
       setStep('done')
-      setTimeout(() => {
-        setOpen(false)
-        router.push(`/dashboard/leads/${form_id}`)
-      }, 1200)
+      setTimeout(() => { setOpen(false); router.push(`/dashboard/leads/${form_id}`) }, 1200)
     } catch (e) {
       setError(`匯入失敗：${e}`)
     } finally {
@@ -198,13 +232,23 @@ export default function ImportDataset() {
   }
 
   function close() {
-    setOpen(false)
-    setStep('upload')
+    setOpen(false); setStep('upload')
     setHeaders([]); setRows([]); setCols([]); setTitle(''); setError('')
   }
 
-  const questionCount = cols.filter(c => c.type === 'question' || c.type === 'multi_question' || c.type === 'open_question').length
+  const questionCount = cols.filter(c => ['question','multi_question','open_question','checkbox_option'].includes(c.type)).length
   const leadCount = cols.filter(c => c.type === 'lead').length
+  // unique checkbox groups
+  const cbGroupCount = new Set(cols.filter(c => c.type === 'checkbox_option' && c.groupName).map(c => c.groupName)).size
+
+  const TYPE_BTNS: { t: ColType; label: string; cls: string }[] = [
+    { t: 'question',        label: '統計欄位', cls: 'bg-violet-600' },
+    { t: 'multi_question',  label: '複選統計', cls: 'bg-orange-600' },
+    { t: 'checkbox_option', label: '核取選項', cls: 'bg-pink-600'   },
+    { t: 'open_question',   label: '開放式',   cls: 'bg-amber-600'  },
+    { t: 'lead',            label: '個人資料', cls: 'bg-cyan-600'   },
+    { t: 'skip',            label: '略過',     cls: 'bg-gray-600'   },
+  ]
 
   return (
     <>
@@ -224,14 +268,14 @@ export default function ImportDataset() {
             <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4 shrink-0">
               <div>
                 <p className="font-semibold text-gray-100">匯入外部作答資料</p>
-                <p className="text-xs text-gray-500 mt-0.5">上傳 CSV → 設定欄位 → 自動建立統計分析</p>
+                <p className="text-xs text-gray-500 mt-0.5">上傳 CSV → AI 自動分析欄位 → 建立統計分析</p>
               </div>
               <button onClick={close} className="text-gray-500 hover:text-gray-300 transition"><X size={18} /></button>
             </div>
 
             <div className="overflow-y-auto flex-1 p-6 space-y-5">
 
-              {/* ── Step 1: Upload ── */}
+              {/* Step 1: Upload */}
               {step === 'upload' && (
                 <>
                   <div
@@ -242,7 +286,7 @@ export default function ImportDataset() {
                   >
                     <Upload size={32} className="mb-3 text-gray-500" />
                     <p className="text-sm font-medium text-gray-300">點擊或拖曳 CSV 檔案</p>
-                    <p className="mt-1.5 text-xs text-gray-600">支援 Google 表單、SurveyMonkey、Excel 匯出的 CSV（UTF-8）</p>
+                    <p className="mt-1.5 text-xs text-gray-600">支援 Google 表單、SurveyMonkey、Excel 匯出的 CSV（UTF-8 / Big5）</p>
                     <input ref={fileRef} type="file" accept=".csv" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
                   </div>
@@ -250,15 +294,22 @@ export default function ImportDataset() {
                 </>
               )}
 
-              {/* ── Step 2: Column mapping ── */}
+              {/* AI classifying */}
+              {step === 'classifying' && (
+                <div className="py-16 text-center">
+                  <Sparkles size={32} className="mx-auto mb-3 text-violet-400 animate-pulse" />
+                  <p className="font-semibold text-gray-100">AI 正在分析欄位…</p>
+                  <p className="mt-1 text-sm text-gray-400">自動辨識個人資料、問卷題目、核取方塊群組</p>
+                </div>
+              )}
+
+              {/* Step 2: Column mapping */}
               {step === 'map' && (
                 <>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-gray-400">資料集名稱</label>
                     <input
-                      type="text"
-                      value={title}
-                      onChange={e => setTitle(e.target.value)}
+                      type="text" value={title} onChange={e => setTitle(e.target.value)}
                       placeholder="例：2024 客戶滿意度調查"
                       className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 outline-none focus:border-violet-500"
                     />
@@ -266,39 +317,51 @@ export default function ImportDataset() {
 
                   <div>
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-gray-400">欄位設定</p>
-                      <p className="text-xs text-gray-600">{rows.length} 筆資料 · {headers.length} 欄</p>
+                      <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
+                        <Sparkles size={11} className="text-violet-400" /> AI 已自動分類，可手動調整
+                      </p>
+                      <p className="text-xs text-gray-600">{rows.length} 筆 · {headers.length} 欄</p>
                     </div>
-                    <div className="mb-3 space-y-1 rounded-lg border border-gray-700 bg-gray-800/60 px-3 py-2 text-xs">
-                      <p><span className="font-semibold text-violet-300">統計欄位</span> — 單選題目，計算每個選項人數，用於圖表和 AI 報告</p>
-                      <p><span className="font-semibold text-orange-300">複選統計</span> — 複選/核取方塊（Google 表單），自動拆分逗號分隔的多選答案</p>
-                      <p><span className="font-semibold text-amber-300">開放式</span> — 開放式問題，列出所有原始答案，不生成圖表</p>
-                      <p><span className="font-semibold text-cyan-300">個人資料</span> — 姓名、Email、電話等受訪者基本資料，會顯示在名單列表</p>
-                      <p><span className="font-semibold text-gray-400">略過</span> — 不匯入（時間戳記等不需要的欄位）</p>
+
+                    {/* Legend */}
+                    <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-0.5 rounded-lg border border-gray-700 bg-gray-800/60 px-3 py-2 text-xs">
+                      <p><span className="font-semibold text-violet-300">統計欄位</span> — 單選/評分題</p>
+                      <p><span className="font-semibold text-orange-300">複選統計</span> — 逗號分隔多選（同格）</p>
+                      <p><span className="font-semibold text-pink-300">核取選項</span> — v/空白的 checkbox 欄位，系統自動合併成一題</p>
+                      <p><span className="font-semibold text-amber-300">開放式</span> — 自由填寫文字</p>
+                      <p><span className="font-semibold text-cyan-300">個人資料</span> — 姓名/Email/電話等</p>
+                      <p><span className="font-semibold text-gray-400">略過</span> — 不匯入</p>
                     </div>
-                    <div className="space-y-1.5 rounded-xl border border-gray-800 bg-gray-800/40 p-3">
+
+                    <div className="space-y-1 rounded-xl border border-gray-800 bg-gray-800/40 p-3">
                       {cols.map((col, idx) => (
-                        <div key={col.header} className="flex items-center gap-3">
-                          <span className="min-w-0 flex-1 truncate text-sm text-gray-300" title={col.header}>{col.header}</span>
-                          <div className="flex shrink-0 gap-1">
-                            {(['question', 'multi_question', 'open_question', 'lead', 'skip'] as ColType[]).map(t => (
+                        <div key={col.header} className="flex items-start gap-2 py-0.5">
+                          <div className="min-w-0 flex-1 pt-1">
+                            <p className="truncate text-sm text-gray-300" title={col.header.replace(/\n/g, ' / ')}>
+                              {col.header.replace(/\n/g, ' / ')}
+                            </p>
+                            {col.type === 'checkbox_option' && col.groupName && (
+                              <p className="text-xs text-pink-400 truncate">群組：{col.groupName}</p>
+                            )}
+                            {col.type === 'lead' && col.leadLabel && (
+                              <p className="text-xs text-cyan-500">→ {col.leadLabel}</p>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 flex-wrap gap-1 justify-end">
+                            {TYPE_BTNS.map(({ t, label, cls }) => (
                               <button key={t} onClick={() => updateCol(idx, { type: t })}
-                                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${col.type === t
-                                  ? t === 'question' ? 'bg-violet-600 text-white'
-                                    : t === 'multi_question' ? 'bg-orange-600 text-white'
-                                    : t === 'open_question' ? 'bg-amber-600 text-white'
-                                    : t === 'lead' ? 'bg-cyan-600 text-white'
-                                    : 'bg-gray-600 text-white'
-                                  : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
-                                {t === 'question' ? '統計欄位' : t === 'multi_question' ? '複選統計' : t === 'open_question' ? '開放式' : t === 'lead' ? '個人資料' : '略過'}
+                                className={`rounded-md px-2 py-0.5 text-xs font-semibold transition ${col.type === t ? cls + ' text-white' : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
+                                {label}
                               </button>
                             ))}
                           </div>
                         </div>
                       ))}
                     </div>
+
                     <p className="mt-2 text-xs text-gray-600">
-                      統計欄位 <span className="text-violet-300 font-medium">{questionCount}</span> 欄 ·
+                      統計欄位 <span className="text-violet-300 font-medium">{questionCount - cbGroupCount}</span> ·
+                      核取群組 <span className="text-pink-300 font-medium ml-1">{cbGroupCount}</span> 組 ·
                       個人資料 <span className="text-cyan-300 font-medium ml-1">{leadCount}</span> 欄
                     </p>
                   </div>
@@ -307,7 +370,7 @@ export default function ImportDataset() {
                 </>
               )}
 
-              {/* ── Step 3: Done ── */}
+              {/* Step 3: Done */}
               {step === 'done' && (
                 <div className="py-10 text-center">
                   <div className="mb-3 text-5xl">✅</div>

@@ -42,7 +42,7 @@ export interface Form {
   lead_capture: LeadCapture
   theme: Record<string, string>
   webhook_url: string | null
-  status: 'active' | 'inactive' | 'archived'
+  status: 'active' | 'inactive' | 'imported' | 'archived'
   ends_at: string | null
   created_at: string
   updated_at: string

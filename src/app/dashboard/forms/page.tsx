@@ -12,6 +12,7 @@ async function getForms(): Promise<Form[]> {
     .from('forms')
     .select('*')
     .neq('status', 'archived')
+    .neq('status', 'imported')
     .order('created_at', { ascending: false })
   return (data || []) as Form[]
 }
