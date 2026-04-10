@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import type { Form } from '@/types'
 import FormActions from '@/components/dashboard/FormActions'
 import EmbedCodeButton from '@/components/dashboard/EmbedCodeButton'
+import SurveyPageButton from '@/components/dashboard/SurveyPageButton'
 import StatusToggle from '@/components/dashboard/StatusToggle'
 
 async function getForms(): Promise<Form[]> {
@@ -80,6 +81,7 @@ export default async function FormsPage() {
               {/* Actions */}
               <div className="flex items-center gap-2 flex-wrap shrink-0">
                 <EmbedCodeButton formId={form.id} />
+                <SurveyPageButton formId={form.id} />
                 <Link href={`/dashboard/forms/${form.id}/preview`}
                   className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs text-orange-400 transition hover:bg-orange-500/20 active:scale-95 active:bg-orange-500/30">
                   預覽
