@@ -10,10 +10,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = req.cookies.get('fl_auth')?.value
-  const expected = process.env.APP_PASSWORD
+  const token = req.cookies.get('_xsid')?.value
 
-  if (!token || token !== expected) {
+  if (!token) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('from', pathname)
