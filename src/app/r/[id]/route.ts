@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import DOMPurify from 'isomorphic-dompurify'
 
 export async function GET(
   _req: NextRequest,
@@ -20,10 +21,24 @@ export async function GET(
     )
   }
 
-  return new Response(data.html_content, {
+  // Sanitize the stored HTML before serving to prevent stored XSS.
+  // WHOLE_DOCUMENT mode preserves the full HTML structure (doctype, head, body).
+  const safeHtml = DOMPurify.sanitize(data.html_content, {
+    WHOLE_DOCUMENT: true,
+    FORCE_BODY: false,
+    // Allow inline styles and common attributes used in the report template.
+    ADD_ATTR: ['target', 'style'],
+    // Prevent javascript: URLs in any attribute.
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+  })
+
+  return new Response(safeHtml, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'public, max-age=3600',
+      // Defense-in-depth: tell the browser not to sniff MIME and block framing.
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN',
     },
   })
 }

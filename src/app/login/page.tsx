@@ -67,7 +67,6 @@ function LoginForm() {
                 shape="rectangular"
                 size="large"
                 text="signin_with"
-                locale="zh-TW"
               />
             </div>
           )}

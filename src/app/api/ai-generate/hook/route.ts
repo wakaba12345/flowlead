@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { isAuthenticated } from '@/lib/auth'
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
+  if (!isAuthenticated(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!checkRateLimit(getClientIp(req), 20, 60_000)) {
+    return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 })
+  }
   const { client_name, industry, product_features, conversion_goal, free_text } = await req.json()
 
   if (!client_name || !conversion_goal) {

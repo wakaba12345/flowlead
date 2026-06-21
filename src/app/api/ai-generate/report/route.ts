@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import Anthropic from '@anthropic-ai/sdk'
+import { isAuthenticated } from '@/lib/auth'
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
+  if (!isAuthenticated(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!checkRateLimit(getClientIp(req), 10, 60_000)) {
+    return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 })
+  }
   const body = await req.json()
   const { form_title, conversion_goal, total, leadFieldStats, questionStats, openEndedStats, crossTabs, leadChartsHtml, questionChartsHtml, openEndedHtml } = body
 
